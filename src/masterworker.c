@@ -52,6 +52,8 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case 'd':
+                memset(&statbuf, 0, sizeof(statbuf));
+                
                 if (stat(optarg, &statbuf) == -1) {
                     errsv = errno;
                     fprintf(stderr, "%s: cannot accesss '%s': %s\n", argv[0], optarg, strerror(errsv));
@@ -77,11 +79,35 @@ int main(int argc, char *argv[]) {
 
     extern int optind;
 
-    if (dirname == NULL && argv[optind] == NULL) {
+    if (dirname == NULL && optind == argc) {
         info(argv[0]);
         exit(EXIT_FAILURE);
     }
 
+    while (optind != argc) {
+        memset(&statbuf, 0, sizeof(statbuf));
+
+        if (stat(argv[optind], &statbuf) == -1) {
+            errsv = errno;
+            fprintf(stderr, "%s: cannot accesss '%s': %s\n", argv[0], argv[optind], strerror(errsv));
+            exit(errsv);
+        }
+        
+        if (!S_ISREG(statbuf.st_mode)) {
+            fprintf(stderr, "%s: '%s': Not a regular file\n", argv[0], argv[optind]);
+            info(argv[0]);
+            exit(EXIT_FAILURE);
+        }
+
+        // TODO
+
+        optind++;
+    }
+
+    if (dirname != NULL) {
+        // TODO
+    }
+    
     exit(EXIT_SUCCESS);
 }
 
