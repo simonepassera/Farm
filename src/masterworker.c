@@ -2,23 +2,83 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 #include <libutil.h>
 
 #define PATHNAME_MAX 255
 
 void info(char *pathname);
 void usage();
-int parser(int argc, char *argv[], long *nthread, long *qlen, long *delay, char **dirname);
 
 int main(int argc, char *argv[]) {
     // Default options
     long nthread = 4, qlen = 8, delay = 0;
     char *dirname = NULL;
 
-    if (parser(argc, argv, &nthread, &qlen, &delay, &dirname) != 0) {
-        if (dirname != NULL) free(dirname);
+    if (argc == 1) {
+        info(argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    struct stat statbuf;
+    extern char *optarg;
+    int opt, errsv;
+
+    while ((opt = getopt(argc, argv, "n:q:t:d:h")) != -1) {
+        switch (opt) {
+            case 'n':
+                if ((isNumber(optarg, &nthread) != 0) || (nthread < 1)) {
+                    fprintf(stderr, "%s: invalid option argument -- 'n'\n", argv[0]);
+                    info(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            case 'q':
+                if ((isNumber(optarg, &qlen) != 0) || (qlen < 1)) {
+                    fprintf(stderr, "%s: invalid option argument -- 'q'\n", argv[0]);
+                    info(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            case 't':
+                if ((isNumber(optarg, &delay) != 0) || (delay < 0)) {
+                    fprintf(stderr, "%s: invalid option argument -- 't'\n", argv[0]);
+                    info(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            case 'd':
+                if (stat(optarg, &statbuf) == -1) {
+                    errsv = errno;
+                    fprintf(stderr, "%s: cannot accesss '%s': %s\n", argv[0], optarg, strerror(errsv));
+                    exit(errsv);
+                }
+
+                if (!S_ISDIR(statbuf.st_mode)) {
+                    fprintf(stderr, "%s: invalid option argument -- 'd'\n", argv[0]);
+                    info(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
+
+                dirname = optarg;
+                break;
+            case 'h':
+                usage();
+                exit(EXIT_SUCCESS);
+            case '?':
+                info(argv[0]);
+                exit(EXIT_FAILURE);
+        }
+    }
+
+    extern int optind;
+
+    if (dirname == NULL && argv[optind] == NULL) {
+        info(argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -42,59 +102,4 @@ void usage() {
     fprintf(stderr, "  ──────────────────────────────────────────────────────────────────────────────────────────────────\n");
     fprintf(stderr, "  \x1B[1mSIGUSR1\x1B[22m\x1B[44Gprints the results calculated up to that moment\n");
     fprintf(stderr, "  \x1B[1mSIGINT - SIGQUIT - SIGTERM - SIGHUP\x1B[22m\x1B[44Gcomplete any tasks in the queue and terminate the process\n");
-}
-
-int parser(int argc, char *argv[], long *nthread, long *qlen, long *delay, char **dirname) {
-    if (argc == 1) {
-        info(argv[0]);
-        return 1;
-    }
-
-    extern char *optarg;
-    int opt;
-
-    while ((opt = getopt(argc, argv, "hn:q:d:t:")) != -1) {
-        switch (opt) {
-            case 'h':
-                usage();
-                return 1;
-                break;
-            case 'n':
-                if ((isNumber(optarg, nthread) != 0) || (*nthread < 1)) {
-                    fprintf(stderr, "%s: invalid option argument -- 'n'\n", argv[0]);
-                    info(argv[0]);
-                    return 1;
-                }
-                break;
-            case 'q':
-                if ((isNumber(optarg, qlen) != 0) || (*qlen < 1)) {
-                    fprintf(stderr, "%s: invalid option argument -- 'q'\n", argv[0]);
-                    info(argv[0]);
-                    return 1;
-                }
-                break;
-            case 'd':
-                CHECK_EXIT("strndup", (*dirname = strndup(optarg, PATHNAME_MAX)) == NULL, 1)
-                break;
-            case 't':
-                if ((isNumber(optarg, delay) != 0) || (*delay < 0)) {
-                    fprintf(stderr, "%s: invalid option argument -- 't'\n", argv[0]);
-                    info(argv[0]);
-                    return 1;
-                }
-                break;
-            case '?':
-                info(argv[0]);
-                return 1;
-        }
-    }
-
-    extern int optind;
-
-    if (*dirname == NULL && argv[optind] == NULL) {
-        info(argv[0]);
-        return 1;
-    }
-
-    return 0;
 }
