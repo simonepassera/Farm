@@ -117,15 +117,16 @@ void info(char *pathname) {
 
 void usage() {
     fprintf(stderr, "Usage: \x1B[1mfarm\x1B[22m [OPTION]... [FILE]...\n");
-    fprintf(stderr, "Read binary files and returns for each of theme a calculation based on the numbers present in files.\n\n");
+    fprintf(stderr, "Read binary FILEs and return for each of them a calculation based on the numbers present in the FILEs.\n");
+    fprintf(stderr, "The printing of the results is sorted in ascending order.\n\n");
     fprintf(stderr, "  \x1B[1m-h\x1B[22m\x1B[21Gdisplay this help and exit\n");
     fprintf(stderr, "  \x1B[1m-n\x1B[22m nthread\x1B[21Gnumber of Worker threads of the MasterWorker process (default value \x1B[1m4\x1B[22m)\n");
     fprintf(stderr, "  \x1B[1m-q\x1B[22m qlen\x1B[21Glength of the concurrent queue between the Master thread and the Worker threads (default value \x1B[1m8\x1B[22m)\n");
-    fprintf(stderr, "  \x1B[1m-d\x1B[22m dirname\x1B[21Gcalculates the result for each binary file in the directory and subdirectories\n");
+    fprintf(stderr, "  \x1B[1m-d\x1B[22m dirname\x1B[21Gcalculate the result for each binary FILE in the directory and subdirectories\n");
     fprintf(stderr, "  \x1B[1m-t\x1B[22m delay\x1B[21Gtime in milliseconds between the sending of two successive requests to\n\x1B[21Gthe Worker threads by the Master thread (default value \x1B[1m0\x1B[22m)\n\n");
     fprintf(stderr, "  \x1B[1mSignals:\x1B[22m\n\n");
     fprintf(stderr, "  Signal\x1B[44GAction\x1B[22m\n");
     fprintf(stderr, "  ──────────────────────────────────────────────────────────────────────────────────────────────────\n");
-    fprintf(stderr, "  \x1B[1mSIGUSR1\x1B[22m\x1B[44Gprints the results calculated up to that moment\n");
+    fprintf(stderr, "  \x1B[1mSIGUSR1\x1B[22m\x1B[44Gprint the results calculated up to that moment\n");
     fprintf(stderr, "  \x1B[1mSIGINT - SIGQUIT - SIGTERM - SIGHUP\x1B[22m\x1B[44Gcomplete any tasks in the queue and terminate the process\n");
 }
