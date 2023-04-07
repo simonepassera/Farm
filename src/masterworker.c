@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <libutil.h>
+#include <libqueue.h>
 
 #define PATHNAME_MAX 255
 
@@ -84,22 +85,27 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    Queue_t *requests;
+    CHECK_EXIT("initQueue", (requests = initQueue()) == NULL, 1)
+
     while (optind != argc) {
         memset(&statbuf, 0, sizeof(statbuf));
 
         if (stat(argv[optind], &statbuf) == -1) {
             errsv = errno;
             fprintf(stderr, "%s: cannot accesss '%s': %s\n", argv[0], argv[optind], strerror(errsv));
+            deleteQueue(requests, free);
             exit(errsv);
         }
         
         if (!S_ISREG(statbuf.st_mode)) {
             fprintf(stderr, "%s: '%s': Not a regular file\n", argv[0], argv[optind]);
             info(argv[0]);
+            deleteQueue(requests, free);
             exit(EXIT_FAILURE);
         }
-
-        // TODO
+        
+        CHECK_EXIT("push", push(requests, argv[optind]) == -1, 1)
 
         optind++;
     }
