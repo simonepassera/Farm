@@ -10,8 +10,6 @@
 #include <libutil.h>
 #include <libqueue.h>
 
-#define PATHNAME_MAX 255
-
 void info(char *pathname);
 void usage();
 
@@ -94,18 +92,22 @@ int main(int argc, char *argv[]) {
         if (stat(argv[optind], &statbuf) == -1) {
             errsv = errno;
             fprintf(stderr, "%s: cannot accesss '%s': %s\n", argv[0], argv[optind], strerror(errsv));
-            deleteQueue(requests, free);
+            deleteQueue(requests);
             exit(errsv);
         }
         
         if (!S_ISREG(statbuf.st_mode)) {
             fprintf(stderr, "%s: '%s': Not a regular file\n", argv[0], argv[optind]);
             info(argv[0]);
-            deleteQueue(requests, free);
+            deleteQueue(requests);
             exit(EXIT_FAILURE);
         }
-        
-        CHECK_EXIT("push", push(requests, argv[optind]) == -1, 1)
+
+        if (strlen(argv[optind]) > PATHNAME_MAX) {
+            fprintf(stderr, "%s: WARNING: '%s': File name too long (FILENAME_MAX = %d)\n", argv[0], argv[optind], PATHNAME_MAX);
+        } else {
+            CHECK_EXIT("push", push(requests, argv[optind]) == -1, 1)
+        }
 
         optind++;
     }

@@ -1,6 +1,9 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 #include <libqueue.h>
 
 /* -------------------- Utility functions -------------------- */
@@ -13,10 +16,6 @@ static inline Queue_t *allocQueue() {
     return malloc(sizeof(Queue_t));
 }
 
-static inline void freeNode(Node_t *node) {
-    free(node);
-}
-
 /* -------------------- Queue interface -------------------- */
 
 Queue_t *initQueue() {
@@ -26,7 +25,7 @@ Queue_t *initQueue() {
     q->head = allocNode();
     if (q->head == NULL) return NULL;
     
-    q->head->data = NULL; 
+    q->head->filename = NULL; 
     q->head->next = NULL;
     q->tail = q->head;    
     q->qlen = 0;
@@ -34,20 +33,20 @@ Queue_t *initQueue() {
     return q;
 }
 
-void deleteQueue(Queue_t *q, void (*fun)(void*)) {
+void deleteQueue(Queue_t *q) {
     while(q->head != q->tail) {
         Node_t *p = (Node_t*) q->head;
 	    q->head = q->head->next;
-        if (fun != NULL) fun(p->data);
-	    freeNode(p);
+        free(p->filename);
+	    free(p);
     }
 
-    if (q->head != NULL) freeNode(q->head);
+    if (q->head != NULL) free(q->head);
     free(q);
 }
 
-int push(Queue_t *q, void *data) {
-    if ((q == NULL) || (data == NULL)) {
+int push(Queue_t *q, char *filename) {
+    if ((q == NULL) || (filename == NULL)) {
         errno = EINVAL;
         return -1;
     }
@@ -55,7 +54,8 @@ int push(Queue_t *q, void *data) {
     Node_t *n = allocNode();
     if (n == NULL) return -1;
 
-    n->data = data; 
+    n->filename = strndup(filename, PATHNAME_MAX); 
+    if (n->filename == NULL) return -1;
     n->next = NULL;
 
     q->tail->next = n;
@@ -77,9 +77,9 @@ void *pop(Queue_t *q) {
         Node_t *n = (Node_t*) q->head;
         q->head = q->head->next;
         q->qlen -= 1;
-        freeNode(n);
+        free(n);
 
-        return q->head->data;
+        return q->head->filename;
     }
 } 
  

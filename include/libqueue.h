@@ -1,9 +1,11 @@
 #ifndef __LIBQUEUE_H__
 #define __LIBQUEUE_H__
 
+#define PATHNAME_MAX 255
+
 // Queue element
 typedef struct Node {
-    void *data;
+    char *filename;
     struct Node *next;
 } Node_t;
 
@@ -21,21 +23,19 @@ typedef struct Queue {
  */
 Queue_t *initQueue();
 
-/*  Delete a queue allocated with initQueue() pointed to by q.
- *  If fun is not NULL, fun is apply to all element in the queue.
- */
-void deleteQueue(Queue_t *q, void (*fun)(void*));
+// Delete a queue allocated with initQueue() pointed to by q.
+void deleteQueue(Queue_t *q);
 
-/*  Insert data into the queue pointed to by q.
+/*  Insert filename into the queue pointed to by q.
  * 
  *  RETURN VALUE: 0 on success
  *                -1 on error (errno is set)
  */
-int push(Queue_t *q, void *data);
+int push(Queue_t *q, char *filename);
 
-/* Pull data from the queue.
+/* Pull filename from the queue.
  *
- *  RETURN VALUE: pointer to the data on success
+ *  RETURN VALUE: pointer to the filename on success
  *                NULL on empty queue or on error (errno is set)
  */
 void *pop(Queue_t *q);
