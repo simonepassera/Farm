@@ -15,24 +15,30 @@
         return -1;			                        \
     }
 
-#define CHECK_EXIT(name, condition, print_errno) \
-    if (condition) {                             \
-        if (print_errno) {                       \
-            perror(name);                        \
-            exit(errno);                         \
-        } else {                                 \
-            exit(EXIT_FAILURE);                  \
-        }                                        \
+#define CHECK_EXIT(progname, message, condition, print_errno)           \
+    if (condition) {                                                    \
+        if (print_errno) {                                              \
+            int errsv = errno;                                          \
+            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m ", progname);  \
+            errno = errsv;                                              \
+            perror(message);                                            \
+            exit(errsv);                                                \
+        } else {                                                        \
+            exit(EXIT_FAILURE);                                         \
+        }                                                               \
     }
 
-#define CHECK_RETURN(name, condition, print_errno) \
-    if (condition) {                               \
-        if (print_errno) {                         \
-            perror(name);                          \
-            return errno;                          \
-        } else {                                   \
-            return EXIT_FAILURE;                   \
-        }                                          \
+#define CHECK_RETURN(progname, message, condition, print_errno)         \
+    if (condition) {                                                    \
+        if (print_errno) {                                              \
+            int errsv = errno;                                          \
+            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m ", progname);  \
+            errno = errsv;                                              \
+            perror(message);                                            \
+            return errsv;                                               \
+        } else {                                                        \
+            return EXIT_FAILURE;                                        \
+        }                                                               \
     }
 
 // Check if the string 's' is a number and store in 'n'

@@ -34,18 +34,21 @@ Queue_t *initQueue() {
 }
 
 void deleteQueue(Queue_t *q) {
-    while(q->head != q->tail) {
-        Node_t *p = (Node_t*) q->head;
-	    q->head = q->head->next;
-        free(p->filename);
-	    free(p);
-    }
+    if (q != NULL) {
+        while(q->head != q->tail) {
+            Node_t *p = q->head;
+            q->head = q->head->next;
+            free(p->filename);
+            free(p);
+        }
 
-    if (q->head != NULL) free(q->head);
-    free(q);
+        free(q->head->filename);
+        free(q->head);
+        free(q);
+    }
 }
 
-int push(Queue_t *q, char *filename) {
+int push(Queue_t *q, char filename[]) {
     if ((q == NULL) || (filename == NULL)) {
         errno = EINVAL;
         return -1;

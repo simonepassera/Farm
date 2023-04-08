@@ -31,7 +31,7 @@ void deleteQueue(Queue_t *q);
  *  RETURN VALUE: 0 on success
  *                -1 on error (errno is set)
  */
-int push(Queue_t *q, char *filename);
+int push(Queue_t *q, char filename[]);
 
 /* Pull filename from the queue.
  *
