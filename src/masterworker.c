@@ -13,7 +13,7 @@
 
 void info(char pathname[]);
 void usage();
-void extra_characters(char filename[], int last);
+void sanitize_filename(char filename[], int last);
 void read_dir(char dirname[], Queue_t *requests, char progname[]);
 
 int main(int argc, char *argv[]) {
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case 'd':
-                extra_characters(optarg, 1);
+                sanitize_filename(optarg, 1);
                 memset(&statbuf, 0, sizeof(statbuf));
                 
                 if (stat(optarg, &statbuf) == -1) {
@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     CHECK_EXIT(argv[0], "initQueue()", (requests = initQueue()) == NULL, 1)
 
     while (optind != argc) {
-        extra_characters(argv[optind], 0);
+        sanitize_filename(argv[optind], 0);
         memset(&statbuf, 0, sizeof(statbuf));
 
         if (stat(argv[optind], &statbuf) == -1) {
@@ -158,7 +158,7 @@ void usage() {
     fprintf(stderr, "  \x1B[1mSIGINT - SIGQUIT - SIGTERM - SIGHUP\x1B[0m\x1B[44Gcomplete any tasks in the queue and terminate the process\n");
 }
 
-void extra_characters(char filename[], int remove_last) {
+void sanitize_filename(char filename[], int remove_last) {
     int i, j, f;
 
     for (i = 0, j = 0, f = 0; filename[i] != '\0'; i++) {

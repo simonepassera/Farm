@@ -8,12 +8,12 @@
 
 /* -------------------- Utility functions -------------------- */
 
-static inline Node_t *allocNode() {
-    return malloc(sizeof(Node_t));
-}
-
 static inline Queue_t *allocQueue() {
     return malloc(sizeof(Queue_t));
+}
+
+static inline Node_t *allocNode() {
+    return malloc(sizeof(Node_t));
 }
 
 /* -------------------- Queue interface -------------------- */
@@ -22,12 +22,8 @@ Queue_t *initQueue() {
     Queue_t *q = allocQueue();
     if (q == NULL) return NULL;
 
-    q->head = allocNode();
-    if (q->head == NULL) return NULL;
-    
-    q->head->filename = NULL; 
-    q->head->next = NULL;
-    q->tail = q->head;    
+    q->head = NULL;
+    q->tail = NULL;    
     q->qlen = 0;
     
     return q;
@@ -35,15 +31,17 @@ Queue_t *initQueue() {
 
 void deleteQueue(Queue_t *q) {
     if (q != NULL) {
-        while(q->head != q->tail) {
-            Node_t *p = q->head;
-            q->head = q->head->next;
-            free(p->filename);
-            free(p);
-        }
+        if (q->qlen != 0) {
+            Node_t *n;
 
-        free(q->head->filename);
-        free(q->head);
+            while(q->head != NULL) {
+                n = q->head;
+                q->head = q->head->next;
+                free(n->filename);
+                free(n);
+            }
+        }
+        
         free(q);
     }
 }
@@ -61,9 +59,15 @@ int push(Queue_t *q, char filename[]) {
     if (n->filename == NULL) return -1;
     n->next = NULL;
 
-    q->tail->next = n;
-    q->tail = n;
     q->qlen += 1;
+
+    if (q->tail == NULL) {
+        q->head = n;
+        q->tail = n;
+    } else {
+        q->tail->next = n;
+        q->tail = n;
+    }
 
     return 0;
 }
@@ -74,15 +78,16 @@ void *pop(Queue_t *q) {
         return NULL;
     }
     
-    if (q->head == q->tail) {
+    if (q->qlen == 0) {
         return NULL;
     } else {
-        Node_t *n = (Node_t*) q->head;
-        q->head = q->head->next;
+        Node_t *n = q->head;
+        if ((q->head = q->head->next) == NULL) q->tail = NULL;
         q->qlen -= 1;
+        char *filename = n->filename;
         free(n);
 
-        return q->head->filename;
+        return filename;
     }
 } 
  
