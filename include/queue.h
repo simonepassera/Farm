@@ -1,7 +1,5 @@
-#ifndef __LIBQUEUE_H__
-#define __LIBQUEUE_H__
-
-#define PATHNAME_MAX 255
+#ifndef __QUEUE_H__
+#define __QUEUE_H__
 
 // Queue element
 typedef struct Node {
@@ -43,4 +41,4 @@ void *pop(Queue_t *q);
 // Return the current length of the queue passed as a parameter.
 long length(Queue_t *q);
 
-#endif /* __LIBQUEUE_H__ */
+#endif /* __QUEUE_H__ */

@@ -1,7 +1,11 @@
-#ifndef __LIBUTIL_H__
-#define __LIBUTIL_H__
+#ifndef __UTILS_H__
+#define __UTILS_H__
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
+
+#define PATHNAME_MAX 255
 
 #define SYSCALL_EXIT(name, return_value, syscall) \
     if ((return_value = syscall) == -1) {         \
@@ -41,12 +45,4 @@
         }                                                               \
     }
 
-// Check if the string 's' is a number and store in 'n'
-extern int isNumber(const char *s, long *n);
-/*
-RETURN: 0 -> success
-        1 -> not a number
-        2 -> overflow/underflow
-*/
-
-#endif /* __LIBUTIL_H__ */
+#endif /* __UTILS_H__ */

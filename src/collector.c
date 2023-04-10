@@ -1,5 +1,8 @@
 #include <stdlib.h>
+#include <stdio.h>
+#include <collector.h>
+#include <utils.h>
 
-int main(int argc, char *argv[]) {
-    
+void exec_collector() {
+
 }

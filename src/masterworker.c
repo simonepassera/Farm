@@ -2,17 +2,27 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <string.h>
-#include <errno.h>
 #include <dirent.h>
-#include <libutil.h>
-#include <libqueue.h>
+#include <utils.h>
+#include <queue.h>
+#include <collector.h>
 
 void info(char pathname[]);
 void usage();
+
+/*  Check if the string 's' is a number and store in 'n'.
+ *
+ *  RETURN VALUE: 0 on success
+ *                1 is not a number
+ *                2 on overflow/underflow  
+ */
+int isNumber(const char *s, long *n);
+
 void sanitize_filename(char filename[], int last);
 void read_dir(char dirname[], Queue_t *requests, char progname[]);
 
@@ -133,7 +143,20 @@ int main(int argc, char *argv[]) {
 
     if (dirname != NULL) read_dir(dirname, requests, argv[0]);
 
-    deleteQueue(requests);
+    pid_t cpid;
+
+    if ((cpid = fork()) == -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m fork(): %s\n", argv[0], strerror(errsv)); 
+        deleteQueue(requests);
+        exit(errsv);
+    }
+
+    if (cpid == 0) {
+        exec_collector();
+    } else {
+
+    }
     
     exit(EXIT_SUCCESS);
 }
@@ -156,6 +179,25 @@ void usage() {
     fprintf(stderr, "  ──────────────────────────────────────────────────────────────────────────────────────────────────\n");
     fprintf(stderr, "  \x1B[1mSIGUSR1\x1B[0m\x1B[44Gprint the results calculated up to that moment\n");
     fprintf(stderr, "  \x1B[1mSIGINT - SIGQUIT - SIGTERM - SIGHUP\x1B[0m\x1B[44Gcomplete any tasks in the queue and terminate the process\n");
+}
+
+int isNumber(const char *s, long *n) {
+    if (s == NULL) return 1;
+    if (strlen(s) == 0) return 1;
+
+    char *e = NULL;
+    errno = 0;
+
+    long val = strtol(s, &e, 10);
+
+    if (errno == ERANGE) return 2; // overflow/underflow
+
+    if (e != NULL && *e == '\0') {
+        *n = val;
+        return 0; // success
+    }
+
+    return 1; // not a number
 }
 
 void sanitize_filename(char filename[], int remove_last) {

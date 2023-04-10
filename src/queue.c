@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <libqueue.h>
+#include <utils.h>
+#include <queue.h>
 
 /* -------------------- Utility functions -------------------- */
 

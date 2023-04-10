@@ -2,47 +2,33 @@ CC = gcc -std=c99
 CFLAGS = -Wpedantic -Wall -Wextra
 OPTFLAGS = -O3
 
-AR = ar
-ARFLAGS = rvs
-
 INCDIR = ./include
 SRCDIR = ./src
 BINDIR = ./bin
-LIBDIR = ./lib
+OBJDIR = ./obj
 TESTDIR = ./test
 
 INCLUDES = -I $(INCDIR)
-LDFLAGS = -L $(LIBDIR)
-LDLIBS = -lutil -lqueue
 
-TARGET = $(BINDIR)/generafile 	\
-		 $(BINDIR)/farm 		\
-		 $(BINDIR)/collector
+TARGET = $(BINDIR)/farm
 
-.PHONY: all clean
+.PHONY: test clean
 
-# pattern lib .c -> .o
-$(SRCDIR)/%.o: $(SRCDIR)/%.c
+# target rule
+$(TARGET): $(SRCDIR)/masterworker.c $(OBJDIR)/queue.o $(OBJDIR)/collector.o
+	$(CC) $^ -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCDIR)/utils.h
 	$(CC) -c $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
 
-# pattern lib.o -> lib.a
-$(LIBDIR)/lib%.a: $(SRCDIR)/lib%.o
-	$(AR) $(ARFLAGS) $@ $^
-
-# first rule
-all: $(TARGET)
+test: $(TARGET) $(BINDIR)/generafile
+	$(TESTDIR)/test.sh
 
 $(BINDIR)/generafile: $(SRCDIR)/generafile.c
 	$(CC) $< -o $@ $(CFLAGS) $(OPTFLAGS)
 
-$(BINDIR)/farm: $(SRCDIR)/masterworker.c $(LIBDIR)/libutil.a $(LIBDIR)/libqueue.a
-	$(CC) $< -o $@ $(INCLUDES) $(LDFLAGS) $(LDLIBS) $(CFLAGS) $(OPTFLAGS)
-
-$(BINDIR)/collector: $(SRCDIR)/collector.c
-	$(CC) $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
-
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(BINDIR)/generafile
 
 cleanall: clean
-	find . \( -name "*.a" -o -name "*.o" \) -exec rm -f {} \;
+	rm -f $(OBJDIR)/*.o
