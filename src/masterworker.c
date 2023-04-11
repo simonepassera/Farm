@@ -3,14 +3,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <dirent.h>
 #include <utils.h>
 #include <queue.h>
-#include <collector.h>
 
 void info(char pathname[]);
 void usage();
@@ -25,6 +26,7 @@ int isNumber(const char *s, long *n);
 
 void sanitize_filename(char filename[], int last);
 void read_dir(char dirname[], Queue_t *requests, char progname[]);
+void cleanup();
 
 int main(int argc, char *argv[]) {
     // Default options
@@ -143,21 +145,73 @@ int main(int argc, char *argv[]) {
 
     if (dirname != NULL) read_dir(dirname, requests, argv[0]);
 
+    int sfd;
+
+    if ((sfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m socket(): %s\n", argv[0], strerror(errsv)); 
+        deleteQueue(requests);
+        exit(errsv);
+    }
+        
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, SOCK_PATH, sizeof(addr.sun_path) - 1);
+        
+    if (bind(sfd, (struct sockaddr*) &addr, sizeof(addr)) == -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m bind(): %s\n", argv[0], strerror(errsv)); 
+        deleteQueue(requests);
+        close(sfd);
+        exit(errsv);
+    }
+
+    if (atexit(cleanup) != 0) {
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m atexit()\n", argv[0]); 
+        deleteQueue(requests);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(sfd, SOMAXCONN) == -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m listen(): %s\n", argv[0], strerror(errsv)); 
+        deleteQueue(requests);
+        close(sfd);
+        exit(errsv);
+    }
+
     pid_t cpid;
 
     if ((cpid = fork()) == -1) {
         errsv = errno;
         fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m fork(): %s\n", argv[0], strerror(errsv)); 
         deleteQueue(requests);
+        close(sfd);
         exit(errsv);
     }
 
     if (cpid == 0) {
-        exec_collector();
-    } else {
+        execl("./collector", "./collector", (char*) NULL);
 
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m exec() './collector': %s \x1B[1;36m(type Ctrl-C)\x1B[0m\n", argv[0], strerror(errsv)); 
+        deleteQueue(requests);
+        close(sfd);
+        _exit(errno);
     }
-    
+
+    int cfd;
+
+    if ((cfd = accept(sfd, NULL, NULL)) == -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m accept(): %s\n", argv[0], strerror(errsv)); 
+        deleteQueue(requests);
+        close(sfd);
+        exit(errsv);
+    }
+
     exit(EXIT_SUCCESS);
 }
 
@@ -288,4 +342,8 @@ void read_dir(char dirname[], Queue_t *requests, char progname[]) {
         deleteQueue(requests);
         exit(errsv);
     }
+}
+
+void cleanup() {
+    unlink(SOCK_PATH);
 }

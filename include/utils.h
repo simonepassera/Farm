@@ -6,6 +6,7 @@
 #include <errno.h>
 
 #define PATHNAME_MAX 255
+#define SOCK_PATH "farm.sck"
 
 #define SYSCALL_EXIT(name, return_value, syscall) \
     if ((return_value = syscall) == -1) {         \
