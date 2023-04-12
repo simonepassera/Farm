@@ -47,7 +47,7 @@ void deleteQueue(Queue_t *q) {
     }
 }
 
-int push(Queue_t *q, char filename[]) {
+int pushQueue(Queue_t *q, char filename[]) {
     if ((q == NULL) || (filename == NULL)) {
         errno = EINVAL;
         return -1;
@@ -73,7 +73,7 @@ int push(Queue_t *q, char filename[]) {
     return 0;
 }
 
-void *pop(Queue_t *q) {        
+char *popQueue(Queue_t *q) {        
     if (q == NULL) {
         errno = EINVAL;
         return NULL;

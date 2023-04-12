@@ -18,7 +18,7 @@ TARGETS = $(BINDIR)/farm \
 # target rule
 all: $(TARGETS)
 
-$(BINDIR)/farm: $(SRCDIR)/masterworker.c $(OBJDIR)/queue.o
+$(BINDIR)/farm: $(SRCDIR)/masterworker.c $(OBJDIR)/queue.o $(OBJDIR)/concurrentqueue.o
 	$(CC) $^ -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
 
 $(BINDIR)/collector: $(SRCDIR)/collector.c $(INCDIR)/utils.h

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <pthread.h>
 
 #define PATHNAME_MAX 255
 #define SOCK_PATH "farm.sck"
@@ -44,6 +45,38 @@
         } else {                                                        \
             return EXIT_FAILURE;                                        \
         }                                                               \
+    }
+
+#define LOCK(mutex, error_number, return_value)                             \
+    if ((error_number = pthread_mutex_lock(mutex)) != 0) {                  \
+        fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_mutex_lock(): ");  \
+        errno = error_number;	                                            \
+        perror(NULL);                                                       \
+        return return_value;                                                \
+    }
+
+#define UNLOCK(mutex, error_number, return_value)                               \
+    if ((error_number = pthread_mutex_unlock(mutex)) != 0) {                    \
+        fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_mutex_unlock(): ");    \
+        errno = error_number;	                                                \
+        perror(NULL);                                                           \
+        return return_value;                                                    \
+    }
+
+#define WAIT(cond, mutex, error_number, return_value)                       \
+    if ((error_number = pthread_cond_wait(cond ,mutex)) != 0) {             \
+        fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_cond_wait(): ");   \
+        errno = error_number;	                                            \
+        perror(NULL);                                                       \
+        return return_value;                                                \
+    }
+
+#define SIGNAL(cond, error_number, return_value)                            \
+    if ((error_number = pthread_cond_signal(cond)) != 0) {                  \
+        fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_cond_signal(): "); \
+        errno = error_number;	                                            \
+        perror(NULL);                                                       \
+        return return_value;                                                \
     }
 
 #endif /* __UTILS_H__ */

@@ -19,26 +19,26 @@ typedef struct Queue {
  *  RETURN VALUE: pointer to the new queue on success
  *                NULL on error (errno is set)
  */
-Queue_t *initQueue();
+extern Queue_t *initQueue();
 
 // Delete a queue allocated with initQueue() pointed to by q.
-void deleteQueue(Queue_t *q);
+extern void deleteQueue(Queue_t *q);
 
 /*  Insert filename into the queue pointed to by q.
  * 
  *  RETURN VALUE: 0 on success
  *                -1 on error (errno is set)
  */
-int push(Queue_t *q, char filename[]);
+extern int pushQueue(Queue_t *q, char filename[]);
 
 /* Pull filename from the queue.
  *
  *  RETURN VALUE: pointer to the filename on success
  *                NULL on empty queue or on error (errno is set)
  */
-void *pop(Queue_t *q);
+extern char *popQueue(Queue_t *q);
 
 // Return the current length of the queue passed as a parameter.
-long length(Queue_t *q);
+extern long length(Queue_t *q);
 
 #endif /* __QUEUE_H__ */

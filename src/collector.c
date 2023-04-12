@@ -12,7 +12,7 @@ int main() {
 
     if ((sfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
         int errsv = errno;
-        fprintf(stderr, "collector: \x1B[1;31merror:\x1B[0m socket(): %s\n", strerror(errsv)); 
+        fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m socket(): %s\n", strerror(errsv)); 
         exit(errsv);
     }
 
@@ -25,7 +25,7 @@ int main() {
 
     if ((pfd = connect(sfd, (struct sockaddr*) &addr, sizeof(addr))) == -1) {
         int errsv = errno;
-        fprintf(stderr, "collector: \x1B[1;31merror:\x1B[0m connect(): %s\n", strerror(errsv)); 
+        fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m connect(): %s\n", strerror(errsv)); 
         exit(errsv);
     }
 }

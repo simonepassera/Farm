@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include <utils.h>
 #include <queue.h>
+#include <concurrentqueue.h>
 
 void info(char pathname[]);
 void usage();
@@ -132,9 +133,9 @@ int main(int argc, char *argv[]) {
         if (strlen(argv[optind]) > PATHNAME_MAX) {
             fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': File name too long (FILENAME_MAX = %d)\n", argv[0], argv[optind], PATHNAME_MAX);
         } else {
-            if (push(requests, argv[optind]) == -1) {
+            if (pushQueue(requests, argv[optind]) == -1) {
                 errsv = errno;
-                fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m push() '%s': %s\n", argv[0], argv[optind], strerror(errsv)); 
+                fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m pushQueue() '%s': %s\n", argv[0], argv[optind], strerror(errsv)); 
                 deleteQueue(requests);
                 exit(errsv);
             }
@@ -196,7 +197,7 @@ int main(int argc, char *argv[]) {
         execl("./collector", "./collector", (char*) NULL);
 
         errsv = errno;
-        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m exec() './collector': %s \x1B[1;36m(type Ctrl-C)\x1B[0m\n", argv[0], strerror(errsv)); 
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m exec() './collector': %s \x1B[1;36m(press Ctrl-C)\x1B[0m\n", argv[0], strerror(errsv)); 
         deleteQueue(requests);
         close(sfd);
         _exit(errno);
@@ -208,6 +209,17 @@ int main(int argc, char *argv[]) {
         errsv = errno;
         fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m accept(): %s\n", argv[0], strerror(errsv)); 
         deleteQueue(requests);
+        close(sfd);
+        exit(errsv);
+    }
+
+    ConcurrentQueue_t *tasks;
+
+    if ((tasks = initConcurrentQueue(qlen)) == NULL) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m initConcurrentQueue()\n", argv[0]); 
+        deleteQueue(requests);
+        close(cfd);
         close(sfd);
         exit(errsv);
     }
@@ -319,9 +331,9 @@ void read_dir(char dirname[], Queue_t *requests, char progname[]) {
             if(!S_ISREG(statbuf.st_mode)) {
                 fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': Not a regular file\n", progname, filename);
             } else {
-                if (push(requests, filename) == -1) {
+                if (pushQueue(requests, filename) == -1) {
                     int errsv = errno;
-                    fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m push() '%s': %s\n", progname, filename, strerror(errsv)); 
+                    fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m pushQueue() '%s': %s\n", progname, filename, strerror(errsv)); 
                     deleteQueue(requests);
                     exit(errsv);
                 }
