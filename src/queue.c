@@ -7,21 +7,16 @@
 #include <utils.h>
 #include <queue.h>
 
-/* -------------------- Utility functions -------------------- */
-
-static inline Queue_t *allocQueue() {
-    return malloc(sizeof(Queue_t));
-}
-
-static inline Node_t *allocNode() {
-    return malloc(sizeof(Node_t));
-}
-
 /* -------------------- Queue interface -------------------- */
 
 Queue_t *initQueue() {
-    Queue_t *q = allocQueue();
-    if (q == NULL) return NULL;
+    Queue_t *q;
+    if ((q = malloc(sizeof(Queue_t))) == NULL) {
+        int errsv = errno;
+        fprintf(stderr, "\x1B[1;31merror:\x1B[0m malloc()\n");
+        errno = errsv;
+        return NULL;
+    }
 
     q->head = NULL;
     q->tail = NULL;    
@@ -53,11 +48,22 @@ int pushQueue(Queue_t *q, char filename[]) {
         return -1;
     }
 
-    Node_t *n = allocNode();
-    if (n == NULL) return -1;
+    Node_t *n;
+    if ((n = malloc(sizeof(Node_t))) == NULL) {
+        int errsv = errno;
+        fprintf(stderr, "\x1B[1;31merror:\x1B[0m malloc()\n");
+        errno = errsv;
+        return -1;
+    }
 
     n->filename = strndup(filename, PATHNAME_MAX); 
-    if (n->filename == NULL) return -1;
+    if (n->filename == NULL) {
+        int errsv = errno;
+        fprintf(stderr, "\x1B[1;31merror:\x1B[0m strndup()\n");
+        errno = errsv;
+        return -1;
+    }
+
     n->next = NULL;
 
     q->qlen += 1;
@@ -92,7 +98,7 @@ char *popQueue(Queue_t *q) {
     }
 } 
  
-long length(Queue_t *q) {
+size_t length(Queue_t *q) {
     if (q == NULL) {
         errno = EINVAL;
         return -1;

@@ -12,7 +12,7 @@
 #include <dirent.h>
 #include <utils.h>
 #include <queue.h>
-#include <concurrentqueue.h>
+#include <threadpool.h>
 
 void info(char pathname[]);
 void usage();
@@ -209,17 +209,6 @@ int main(int argc, char *argv[]) {
         errsv = errno;
         fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m accept(): %s\n", argv[0], strerror(errsv)); 
         deleteQueue(requests);
-        close(sfd);
-        exit(errsv);
-    }
-
-    ConcurrentQueue_t *tasks;
-
-    if ((tasks = initConcurrentQueue(qlen)) == NULL) {
-        errsv = errno;
-        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m initConcurrentQueue()\n", argv[0]); 
-        deleteQueue(requests);
-        close(cfd);
         close(sfd);
         exit(errsv);
     }

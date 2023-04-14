@@ -11,7 +11,7 @@ typedef struct Node {
 typedef struct Queue {
     Node_t *head;
     Node_t *tail;
-    long qlen; 
+    size_t qlen; 
 } Queue_t;
 
 /*  Initialize a queue. 
@@ -39,6 +39,6 @@ extern int pushQueue(Queue_t *q, char filename[]);
 extern char *popQueue(Queue_t *q);
 
 // Return the current length of the queue passed as a parameter.
-extern long length(Queue_t *q);
+extern size_t length(Queue_t *q);
 
 #endif /* __QUEUE_H__ */

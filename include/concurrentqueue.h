@@ -8,6 +8,8 @@ typedef struct ConcurrentQueue {
     size_t tail;
     size_t qsize;
     size_t qlen;
+    size_t num_prod;
+    size_t num_cons;
     pthread_mutex_t mutex;
     pthread_cond_t cond_full;
     pthread_cond_t cond_empty;
@@ -17,7 +19,7 @@ typedef struct ConcurrentQueue {
 /*  Initialize a concurrent queue of size 'n'. 
  *
  *  RETURN VALUE: pointer to the new queue on success
- *                NULL on error (print errno message)
+ *                NULL on error (errno is set)
  */
 extern ConcurrentQueue_t *initConcurrentQueue(size_t n);
 
