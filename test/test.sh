@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd ./bin
+
 if [ ! -e generafile ];
 then
     echo "Compilare generafile, eseguibile mancante!";

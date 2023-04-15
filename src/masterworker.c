@@ -124,27 +124,40 @@ int main(int argc, char *argv[]) {
         }
         
         if (!S_ISREG(statbuf.st_mode)) {
-            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m '%s': Not a regular file\n", argv[0], argv[optind]);
-            info(argv[0]);
-            deleteQueue(requests);
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': Not a regular file\n", argv[0], argv[optind]);
+            optind++;
+            continue;
+        }
+
+        if((statbuf.st_size % sizeof(long)) != 0) {
+            fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': Invalid format\n", argv[0], argv[optind]);
+            optind++;
+            continue;
         }
 
         if (strlen(argv[optind]) > PATHNAME_MAX) {
             fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': File name too long (FILENAME_MAX = %d)\n", argv[0], argv[optind], PATHNAME_MAX);
-        } else {
-            if (pushQueue(requests, argv[optind]) == -1) {
-                errsv = errno;
-                fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m pushQueue() '%s': %s\n", argv[0], argv[optind], strerror(errsv)); 
-                deleteQueue(requests);
-                exit(errsv);
-            }
+            optind++;
+            continue;
+        }
+
+        if (pushQueue(requests, argv[optind]) == -1) {
+            errsv = errno;
+            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m pushQueue() '%s': %s\n", argv[0], argv[optind], strerror(errsv)); 
+            deleteQueue(requests);
+            exit(errsv);
         }
 
         optind++;
     }
 
     if (dirname != NULL) read_dir(dirname, requests, argv[0]);
+
+    if (length(requests) == 0) {
+        info(argv[0]);
+        deleteQueue(requests);
+        exit(EXIT_SUCCESS);
+    }
 
     int sfd;
 
@@ -211,13 +224,23 @@ int main(int argc, char *argv[]) {
         deleteQueue(requests);
         close(sfd);
         exit(errsv);
+    } 
+
+    Threadpool_t *pool = initThreadPool(nthread, qlen, cfd);
+
+    char *filename;
+    
+    while ((filename = popQueue(requests)) != NULL) {
+        executeThreadPool(pool, filename);
     }
+
+    shutdownThreadPool(pool);
 
     exit(EXIT_SUCCESS);
 }
 
 void info(char pathname[]) {
-    fprintf(stderr, "Try '\x1B[1;36m%s -h\x1B[0m' for more information.\n", pathname);
+    fprintf(stderr, "%s: Try '\x1B[1;36m%s -h\x1B[0m' for more information\n", pathname, pathname);
 }
 
 void usage() {
@@ -319,6 +342,8 @@ void read_dir(char dirname[], Queue_t *requests, char progname[]) {
 	    } else {
             if(!S_ISREG(statbuf.st_mode)) {
                 fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': Not a regular file\n", progname, filename);
+            } else if ((statbuf.st_size % sizeof(long)) != 0) {
+                fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': Invalid format\n", progname, filename);
             } else {
                 if (pushQueue(requests, filename) == -1) {
                     int errsv = errno;

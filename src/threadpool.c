@@ -5,13 +5,62 @@
 #include <concurrentqueue.h>
 
 typedef struct Args {
+    int tid;
     ConcurrentQueue_t *tasks;
     int collector_fd;
     pthread_mutex_t *collector_fd_mutex;
 } Args_t;
 
-static void *worker_fun(void *args) {
-    
+static void *worker_fun(void *arg) {
+    if (arg == NULL) {
+        fprintf(stderr, "thread[%lu]: \x1B[1;31merror:\x1B[0m Invalid argument\n", pthread_self());
+        exit(EINVAL);
+    }
+
+    Args_t *args = (Args_t*) arg;
+    char *filename;
+    FILE *stream;
+    size_t size = sizeof(long);
+    long sum, number, i;
+
+    while(1) {
+        if ((errno = 0, filename = popConcurrentQueue(args->tasks)) != NULL) {
+            if ((stream = fopen(filename, "rb")) != NULL) {
+                sum = 0;
+                i = 0;
+
+                while (fread(&number, size, 1, stream) != 0) {
+                    sum += i * number;
+                    i++;
+                }
+
+                if (feof(stream) != 0) {
+                    printf("thread[%d]: '%s': %ld\n", args->tid, filename, sum);
+                } else {
+                    fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m fread() '%s'\n", args->tid, filename);
+                    continue;
+                }
+            } else {
+                int errsv = errno;
+                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m fopen() '%s': ", args->tid, filename);
+                errno = errsv;
+                perror(NULL);
+                continue;
+            }
+        } else {
+            if (errno == 0) {
+                free(args);
+                pthread_exit(NULL);
+            } else {
+                int errsv = errno;
+                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m popConcurrentQueue(): ", args->tid);
+                errno = errsv;
+                perror(NULL);
+                free(args);
+                exit(errsv);
+            }
+        }
+    }
 }
 
 Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int socket_fd) {
@@ -84,6 +133,7 @@ Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int socket_fd)
             return NULL;
         }
 
+        args->tid = i + 1;
         args->tasks = pool->tasks;
         args->collector_fd = socket_fd;
         args->collector_fd_mutex = pool->collector_fd_mutex;
