@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <errno.h>
+#include <utils.h>
 #include <threadpool.h>
-#include <concurrentqueue.h>
 
 typedef struct Args {
     int tid;
@@ -17,46 +18,78 @@ static void *worker_fun(void *arg) {
         exit(EINVAL);
     }
 
-    Args_t *args = (Args_t*) arg;
+    Args_t *args = (Args_t*) arg;  
+    int tid = args->tid;
+    ConcurrentQueue_t *tasks = args->tasks;
+    int collector_fd = args-> collector_fd;
+    pthread_mutex_t *collector_fd_mutex = args->collector_fd_mutex;
+    free(args);
+
     char *filename;
     FILE *stream;
     size_t size = sizeof(long);
-    long sum, number, i;
+    long result, number, i;
+    int filename_size, error_number;
 
     while(1) {
-        if ((errno = 0, filename = popConcurrentQueue(args->tasks)) != NULL) {
+        if ((errno = 0, filename = popConcurrentQueue(tasks)) != NULL) {
             if ((stream = fopen(filename, "rb")) != NULL) {
-                sum = 0;
-                i = 0;
+                result = 0; i = 0;
 
                 while (fread(&number, size, 1, stream) != 0) {
-                    sum += i * number;
+                    result += i * number;
                     i++;
                 }
 
                 if (feof(stream) != 0) {
-                    printf("thread[%d]: '%s': %ld\n", args->tid, filename, sum);
+                    filename_size = strlen(filename) + 1;
+
+                    LOCK_EXIT(collector_fd_mutex, error_number, tid)
+
+                    if (writen(collector_fd, &filename_size, sizeof(int)) == -1) {
+                        int errsv = errno;
+                        fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m writen() 'filename_size': ", tid);
+                        errno = errsv;
+                        perror(NULL);
+                        exit(errsv);
+                    }
+
+                    if (writen(collector_fd, filename, filename_size) == -1) {
+                        int errsv = errno;
+                        fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m writen() 'filename': ", tid);
+                        errno = errsv;
+                        perror(NULL);
+                        exit(errsv);
+                    }
+                    
+                    if (writen(collector_fd, &result, sizeof(long)) == -1) {
+                        int errsv = errno;
+                        fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m writen() 'result': ", tid);
+                        errno = errsv;
+                        perror(NULL);
+                        exit(errsv);
+                    }
+
+                    UNLOCK_EXIT(collector_fd_mutex, error_number, tid)
                 } else {
-                    fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m fread() '%s'\n", args->tid, filename);
+                    fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m fread() '%s'\n", tid, filename);
                     continue;
                 }
             } else {
                 int errsv = errno;
-                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m fopen() '%s': ", args->tid, filename);
+                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m fopen() '%s': ", tid, filename);
                 errno = errsv;
                 perror(NULL);
                 continue;
             }
         } else {
             if (errno == 0) {
-                free(args);
                 pthread_exit(NULL);
             } else {
                 int errsv = errno;
-                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m popConcurrentQueue(): ", args->tid);
+                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m popConcurrentQueue(): ", tid);
                 errno = errsv;
                 perror(NULL);
-                free(args);
                 exit(errsv);
             }
         }

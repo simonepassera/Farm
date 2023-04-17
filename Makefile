@@ -1,4 +1,4 @@
-CC = gcc -std=c99
+CC = gcc -std=gnu99
 CFLAGS = -Wpedantic -Wall -Wextra
 OPTFLAGS = -O3
 
@@ -18,16 +18,22 @@ TARGETS = $(BINDIR)/farm \
 # target rule
 all: $(TARGETS)
 
-$(BINDIR)/farm: $(SRCDIR)/masterworker.c $(OBJDIR)/queue.o $(OBJDIR)/concurrentqueue.o $(OBJDIR)/threadpool.o
+$(BINDIR)/farm: $(SRCDIR)/masterworker.c $(OBJDIR)/queue.o $(OBJDIR)/concurrentqueue.o $(OBJDIR)/threadpool.o $(OBJDIR)/utils.o
 	$(CC) $^ -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
 
-$(BINDIR)/collector: $(SRCDIR)/collector.c $(INCDIR)/utils.h
+$(BINDIR)/collector: $(SRCDIR)/collector.c $(OBJDIR)/utils.o
 	$(CC) $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
 
-$(OBJDIR)/threadpool.o: $(SRCDIR)/threadpool.c $(INCDIR)/threadpool.h
+$(OBJDIR)/threadpool.o: $(SRCDIR)/threadpool.c $(INCDIR)/threadpool.h $(INCDIR)/utils.h
 	$(CC) -c $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCDIR)/%.h $(INCDIR)/utils.h
+$(OBJDIR)/queue.o: $(SRCDIR)/queue.c $(INCDIR)/queue.h
+	$(CC) -c $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
+
+$(OBJDIR)/concurrentqueue.o: $(SRCDIR)/concurrentqueue.c $(INCDIR)/concurrentqueue.h $(INCDIR)/utils.h
+	$(CC) -c $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
+
+$(OBJDIR)/utils.o: $(SRCDIR)/utils.c $(INCDIR)/utils.h
 	$(CC) -c $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
 
 test: all $(BINDIR)/generafile

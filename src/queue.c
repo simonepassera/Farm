@@ -1,10 +1,7 @@
-#define _POSIX_C_SOURCE 200809L
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <utils.h>
 #include <queue.h>
 
 /* -------------------- Queue interface -------------------- */
@@ -56,17 +53,19 @@ int pushQueue(Queue_t *q, char filename[]) {
         return -1;
     }
 
-    n->filename = strndup(filename, PATHNAME_MAX); 
-    if (n->filename == NULL) {
+    size_t filename_len = strlen(filename);
+ 
+    if ((n->filename = malloc(filename_len + 1)) == NULL) {
         int errsv = errno;
-        fprintf(stderr, "\x1B[1;31merror:\x1B[0m strndup()\n");
+        fprintf(stderr, "\x1B[1;31merror:\x1B[0m malloc()\n");
         errno = errsv;
         return -1;
     }
 
-    n->next = NULL;
+    memcpy(n->filename, filename, filename_len);
+    n->filename[filename_len] = '\0';
 
-    q->qlen += 1;
+    n->next = NULL;
 
     if (q->tail == NULL) {
         q->head = n;
@@ -75,6 +74,8 @@ int pushQueue(Queue_t *q, char filename[]) {
         q->tail->next = n;
         q->tail = n;
     }
+
+    q->qlen++;
 
     return 0;
 }
@@ -90,7 +91,7 @@ char *popQueue(Queue_t *q) {
     } else {
         Node_t *n = q->head;
         if ((q->head = q->head->next) == NULL) q->tail = NULL;
-        q->qlen -= 1;
+        q->qlen--;
         char *filename = n->filename;
         free(n);
 

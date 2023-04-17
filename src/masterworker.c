@@ -1,5 +1,3 @@
-#define _POSIX_C_SOURCE 200809L
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,7 +29,7 @@ void cleanup();
 
 int main(int argc, char *argv[]) {
     // Default options
-    long nthread = 4, qlen = 8, delay = 0;
+    long pool_size = 4, queue_size = 8, delay = 0;
     char *dirname = NULL;
 
     if (argc == 1) {
@@ -47,14 +45,14 @@ int main(int argc, char *argv[]) {
     while ((opt = getopt(argc, argv, ":n:q:t:d:h")) != -1) {
         switch (opt) {
             case 'n':
-                if ((isNumber(optarg, &nthread) != 0) || (nthread < 1)) {
+                if ((isNumber(optarg, &pool_size) != 0) || (pool_size < 1)) {
                     fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m invalid option argument -- 'n'\n", argv[0]);
                     info(argv[0]);
                     exit(EXIT_FAILURE);
                 }
                 break;
             case 'q':
-                if ((isNumber(optarg, &qlen) != 0) || (qlen < 1)) {
+                if ((isNumber(optarg, &queue_size) != 0) || (queue_size < 1)) {
                     fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m invalid option argument -- 'q'\n", argv[0]);
                     info(argv[0]);
                     exit(EXIT_FAILURE);
@@ -226,15 +224,32 @@ int main(int argc, char *argv[]) {
         exit(errsv);
     } 
 
-    Threadpool_t *pool = initThreadPool(nthread, qlen, cfd);
-
-    char *filename;
+    Threadpool_t *pool;
     
-    while ((filename = popQueue(requests)) != NULL) {
-        executeThreadPool(pool, filename);
+    if ((pool = initThreadPool(pool_size, queue_size, cfd)) == NULL) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m initThreadPool(): %s\n", argv[0], strerror(errsv)); 
+        deleteQueue(requests);
+        close(cfd);
+        close(sfd);
+        exit(errsv);
     }
 
-    shutdownThreadPool(pool);
+    char *filename;
+
+    int sigexit = 0;
+    
+    while (sigexit == 0) {
+        if ((errno = 0, filename = popQueue(requests)) != NULL) {
+            executeThreadPool(pool, filename);
+
+        } else if (errno == 0) {
+
+            shutdownThreadPool(pool);
+
+        } else {
+        }
+    }
 
     exit(EXIT_SUCCESS);
 }
@@ -248,15 +263,15 @@ void usage() {
     fprintf(stderr, "Read binary FILEs and return for each of them a calculation based on the numbers present in the FILEs.\n");
     fprintf(stderr, "The printing of the results is sorted in ascending order.\n\n");
     fprintf(stderr, "  \x1B[1m-h\x1B[0m\x1B[21Gdisplay this help and exit\n");
-    fprintf(stderr, "  \x1B[1m-n\x1B[0m nthread\x1B[21Gnumber of Worker threads of the MasterWorker process (default value \x1B[1m4\x1B[0m)\n");
-    fprintf(stderr, "  \x1B[1m-q\x1B[0m qlen\x1B[21Glength of the concurrent queue between the Master thread and the Worker threads (default value \x1B[1m8\x1B[0m)\n");
-    fprintf(stderr, "  \x1B[1m-d\x1B[0m dirname\x1B[21Gcalculate the result for each binary FILE in the directory and subdirectories\n");
-    fprintf(stderr, "  \x1B[1m-t\x1B[0m delay\x1B[21Gtime in milliseconds between the sending of two successive requests to\n\x1B[21Gthe Worker threads by the Master thread (default value \x1B[1m0\x1B[0m)\n\n");
+    fprintf(stderr, "  \x1B[1m-n\x1B[0m \x1B[4mthreads\x1B[0m\x1B[21Gnumber of Worker threads (default value \x1B[1m4\x1B[0m)\n");
+    fprintf(stderr, "  \x1B[1m-q\x1B[0m \x1B[4msize\x1B[0m\x1B[21Glength of the concurrent queue between the Master thread and the Worker threads (default value \x1B[1m8\x1B[0m)\n");
+    fprintf(stderr, "  \x1B[1m-d\x1B[0m \x1B[4mdirname\x1B[0m\x1B[21Gcalculate the result for each binary FILE in the \x1B[4mdirname\x1B[0m directory and subdirectories\n");
+    fprintf(stderr, "  \x1B[1m-t\x1B[0m \x1B[4mdelay\x1B[0m\x1B[21Gtime in milliseconds between the sending of two successive requests to\n\x1B[21Gthe Worker threads by the Master thread (default value \x1B[1m0\x1B[0m)\n\n");
     fprintf(stderr, "  \x1B[1mSignals:\x1B[0m\n\n");
     fprintf(stderr, "  Signal\x1B[44GAction\n");
     fprintf(stderr, "  ──────────────────────────────────────────────────────────────────────────────────────────────────\n");
     fprintf(stderr, "  \x1B[1mSIGUSR1\x1B[0m\x1B[44Gprint the results calculated up to that moment\n");
-    fprintf(stderr, "  \x1B[1mSIGINT - SIGQUIT - SIGTERM - SIGHUP\x1B[0m\x1B[44Gcomplete any tasks in the queue and terminate the process\n");
+    fprintf(stderr, "  \x1B[1mSIGHUP - SIGINT - SIGQUIT - SIGTERM\x1B[0m\x1B[44Gcomplete any tasks in the queue and terminate the process\n");
 }
 
 int isNumber(const char *s, long *n) {

@@ -90,14 +90,14 @@ int pushConcurrentQueue(ConcurrentQueue_t *q, char filename[]) {
 	    return -1;
     }
 
-    int ret;
+    int error_number;
 
-    LOCK(&q->mutex, ret, -1)
+    LOCK_RETURN(&q->mutex, error_number, -1)
 
     q->num_prod++;
 
     while (q->qlen == q->qsize) {
-        WAIT(&q->cond_full, &q->mutex, ret, -1)
+        WAIT_RETURN(&q->cond_full, &q->mutex, error_number, -1)
     }
 
     q->num_prod--;
@@ -108,9 +108,9 @@ int pushConcurrentQueue(ConcurrentQueue_t *q, char filename[]) {
     q->qlen += 1;
 
     if (q->num_cons > 0)
-        SIGNAL(&q->cond_empty, ret, -1)  
+        SIGNAL_RETURN(&q->cond_empty, error_number, -1)  
 
-    UNLOCK(&q->mutex, ret, -1)
+    UNLOCK_RETURN(&q->mutex, error_number, -1)
     
     return 0;
 }
@@ -121,14 +121,14 @@ char *popConcurrentQueue(ConcurrentQueue_t *q) {
 	    return NULL;
     }
 
-    int ret;
+    int error_number;
 
-    LOCK(&q->mutex, ret, NULL)
+    LOCK_RETURN(&q->mutex, error_number, NULL)
 
     q->num_cons++;
 
     while (q->qlen == 0) {
-        WAIT(&q->cond_empty, &q->mutex, ret, NULL)
+        WAIT_RETURN(&q->cond_empty, &q->mutex, error_number, NULL)
     }
 
     q->num_cons--;
@@ -140,9 +140,9 @@ char *popConcurrentQueue(ConcurrentQueue_t *q) {
     q->qlen -= 1;
 
     if (q->num_prod > 0)
-        SIGNAL(&q->cond_full, ret, NULL)  
+        SIGNAL_RETURN(&q->cond_full, error_number, NULL)  
     
-    UNLOCK(&q->mutex, ret, NULL)
+    UNLOCK_RETURN(&q->mutex, error_number, NULL)
     
     return filename;
 } 
