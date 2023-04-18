@@ -76,9 +76,9 @@ int main(int argc, char *argv[]) {
                 }
 
                 if (!S_ISDIR(statbuf.st_mode)) {
-                    fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m invalid option argument -- 'd'\n", argv[0]);
+                    fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m invalid option argument -- 'd': Not a directory\n", argv[0]);
                     info(argv[0]);
-                    exit(EXIT_FAILURE);
+                    exit(ENOTDIR);
                 }
 
                 if (strlen(optarg) > PATHNAME_MAX)
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
 
     if (dirname != NULL) read_dir(dirname, requests, argv[0]);
 
-    if (length(requests) == 0) {
+    if (lengthQueue(requests) == 0) {
         info(argv[0]);
         deleteQueue(requests);
         exit(EXIT_SUCCESS);
@@ -222,7 +222,18 @@ int main(int argc, char *argv[]) {
         deleteQueue(requests);
         close(sfd);
         exit(errsv);
-    } 
+    }
+
+    int opcode = lengthQueue(requests);
+
+    if (writen(cfd, &opcode, sizeof(int)) == -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m writen() 'opcode: num of files': %s\n", argv[0], strerror(errsv)); 
+        deleteQueue(requests);
+        close(cfd);
+        close(sfd);
+        exit(errsv);
+    }
 
     Threadpool_t *pool;
     
@@ -236,19 +247,23 @@ int main(int argc, char *argv[]) {
     }
 
     char *filename;
-
-    int sigexit = 0;
     
-    while (sigexit == 0) {
-        if ((errno = 0, filename = popQueue(requests)) != NULL) {
-            executeThreadPool(pool, filename);
+    while ((errno = 0, filename = popQueue(requests)) != NULL) {
+        executeThreadPool(pool, filename);
+    }
 
-        } else if (errno == 0) {
+    deleteQueue(requests);
 
-            shutdownThreadPool(pool);
+    shutdownThreadPool(pool);
 
-        } else {
-        }
+    opcode = -1;
+
+    if (writen(cfd, &opcode, sizeof(int)) == -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m writen() 'opcode: exit': %s\n", argv[0], strerror(errsv)); 
+        close(cfd);
+        close(sfd);
+        exit(errsv);
     }
 
     exit(EXIT_SUCCESS);

@@ -39,6 +39,6 @@ extern int pushQueue(Queue_t *q, char filename[]);
 extern char *popQueue(Queue_t *q);
 
 // Return the current length of the queue passed as a parameter.
-extern size_t length(Queue_t *q);
+extern size_t lengthQueue(Queue_t *q);
 
 #endif /* __QUEUE_H__ */

@@ -99,7 +99,7 @@ char *popQueue(Queue_t *q) {
     }
 } 
  
-size_t length(Queue_t *q) {
+size_t lengthQueue(Queue_t *q) {
     if (q == NULL) {
         errno = EINVAL;
         return -1;

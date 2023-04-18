@@ -97,7 +97,7 @@ static void *worker_fun(void *arg) {
 }
 
 Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int socket_fd) {
-    if((pool_size == 0) || (queue_size == 0)) {
+    if((pool_size == 0) || (queue_size == 0) || (socket_fd < 0)) {
 	    errno = EINVAL;
         return NULL;
     }

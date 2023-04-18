@@ -2,10 +2,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <utils.h>
+
+typedef struct Results {
+    char *filename;
+    long result;
+} Results_t;
+
+void deleteResults(Results_t **results, size_t size);
+void printResults(Results_t **results, size_t size);
 
 int main() {
     int sfd;
@@ -21,11 +30,155 @@ int main() {
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, SOCK_PATH, sizeof(addr.sun_path) - 1);
 
-    int pfd;
-
-    if ((pfd = connect(sfd, (struct sockaddr*) &addr, sizeof(addr))) == -1) {
+    if (connect(sfd, (struct sockaddr*) &addr, sizeof(addr)) == -1) {
         int errsv = errno;
         fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m connect(): %s\n", strerror(errsv)); 
         exit(errsv);
+    }
+
+    int n_results, read_return;
+
+    if ((read_return = readn(sfd, &n_results, sizeof(int))) == -1) {
+        int errsv = errno;
+        fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m readn() 'n_results': %s\n", strerror(errsv)); 
+        close(sfd);
+        exit(errsv);
+    } else if (read_return == 0) {
+        fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m readn() 'n_results': EOF\n");
+        close(sfd);
+        exit(EXIT_FAILURE);      
+    }
+    
+    if (n_results <= 0){
+        fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m 'n_results': Invalid value\n"); 
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    Results_t **results;
+
+    if ((results = calloc(n_results, sizeof(Results_t*))) == NULL) {
+        int errsv = errno;
+        fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m calloc(): %s\n", strerror(errsv));
+        close(sfd);
+        exit(errsv);
+    }
+
+    int opcode;
+    size_t results_index = 0;
+
+    while (1) {
+        if ((read_return = readn(sfd, &opcode, sizeof(int))) == -1) {
+            int errsv = errno;
+            fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m readn() 'opcode': %s\n", strerror(errsv));
+            deleteResults(results, results_index);
+            close(sfd);
+            exit(errsv);
+        } else if (read_return == 0) {
+            fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m readn() 'opcode': EOF\n");
+            deleteResults(results, results_index);
+            close(sfd);
+            exit(EXIT_FAILURE);
+        }
+
+        if (opcode == 0) {
+            printResults(results, results_index);
+        } else if (opcode > 0) {
+            Results_t *new_result;
+
+            if ((new_result = malloc(sizeof(Results_t))) == NULL) {
+                int errsv = errno;
+                fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m malloc(): %s\n", strerror(errsv));
+                deleteResults(results, results_index);
+                close(sfd);
+                exit(errsv);
+            }
+
+            if ((new_result->filename = malloc(opcode * sizeof(char))) == NULL) {
+                int errsv = errno;
+                fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m malloc(): %s\n", strerror(errsv));
+                deleteResults(results, results_index);
+                close(sfd);
+                exit(errsv);
+            }
+
+            if ((read_return = readn(sfd, new_result->filename, opcode * sizeof(char))) == -1) {
+                int errsv = errno;
+                fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m readn() 'filename': %s\n", strerror(errsv));
+                deleteResults(results, results_index);
+                close(sfd);
+                exit(errsv);
+            } else if (read_return == 0) {
+                fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m readn() 'filename': EOF\n");
+                deleteResults(results, results_index);
+                close(sfd);
+                exit(EXIT_FAILURE);
+            }
+
+            if ((read_return = readn(sfd, &new_result->result, sizeof(long))) == -1) {
+                int errsv = errno;
+                fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m readn() 'result': %s\n", strerror(errsv));
+                deleteResults(results, results_index);
+                close(sfd);
+                exit(errsv);
+            } else if (read_return == 0) {
+                fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m readn() 'result': EOF\n");
+                deleteResults(results, results_index);
+                close(sfd);
+                exit(EXIT_FAILURE);
+            }
+
+            if (results_index >= ((size_t) n_results)) {
+                fprintf(stderr, "./collector: \x1B[1;31merror:\x1B[0m Too many results\n");
+                deleteResults(results, results_index);
+                close(sfd);
+                exit(EXIT_FAILURE);
+            }
+
+            results[results_index] = new_result;
+            results_index++;
+        } else {
+            printResults(results, results_index);
+            deleteResults(results, results_index);
+            close(sfd);
+            exit(EXIT_SUCCESS);
+        }
+    }
+}
+
+void deleteResults(Results_t **results, size_t size) {
+    if (size != 0) {
+        for (size_t i = 0; i < size; i++) {
+            free(results[i]->filename);
+            free(results[i]);
+        }
+    }
+
+    free(results);
+}
+
+int comparResults(const void *a, const void *b) {
+    Results_t *res_a = *(Results_t**)a;
+    Results_t *res_b = *(Results_t**)b;
+
+    if (res_a->result < res_b->result) {
+        return -1;
+    } else if (res_a->result > res_b->result) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+void printResults(Results_t **results, size_t size) {
+    if (size != 0) {
+        qsort(results, size, sizeof(Results_t*), comparResults);
+
+        for (size_t i = 0; i < size; i++) {
+            printf("%ld %s\n", results[i]->result, results[i]->filename);
+            fflush(stdout);
+        }
+
+        printf("\n");
     }
 }

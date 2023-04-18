@@ -22,7 +22,7 @@ $(BINDIR)/farm: $(SRCDIR)/masterworker.c $(OBJDIR)/queue.o $(OBJDIR)/concurrentq
 	$(CC) $^ -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
 
 $(BINDIR)/collector: $(SRCDIR)/collector.c $(OBJDIR)/utils.o
-	$(CC) $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
+	$(CC) $^ -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
 
 $(OBJDIR)/threadpool.o: $(SRCDIR)/threadpool.c $(INCDIR)/threadpool.h $(INCDIR)/utils.h
 	$(CC) -c $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)

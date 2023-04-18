@@ -56,7 +56,7 @@
     }
 
 #define UNLOCK_EXIT(mutex, error_number, tid)                                                   \
-    if ((error_number = pthread_mutex_lock(mutex)) != 0) {                                      \
+    if ((error_number = pthread_mutex_unlock(mutex)) != 0) {                                      \
         fprintf(stderr, "\x1B[1;31mthread[%d]: error:\x1B[0m pthread_mutex_unlock(): ", tid);   \
         errno = error_number;	                                                                \
         perror(NULL);                                                                           \
