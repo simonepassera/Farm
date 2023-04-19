@@ -27,7 +27,6 @@ static void *worker_fun(void *arg) {
 
     char *filename;
     FILE *stream;
-    size_t size = sizeof(long);
     long result, number, i;
     int filename_size, error_number;
 
@@ -36,7 +35,7 @@ static void *worker_fun(void *arg) {
             if ((stream = fopen(filename, "rb")) != NULL) {
                 result = 0; i = 0;
 
-                while (fread(&number, size, 1, stream) != 0) {
+                while (fread(&number, sizeof(long), 1, stream) != 0) {
                     result += i * number;
                     i++;
                 }
@@ -73,15 +72,22 @@ static void *worker_fun(void *arg) {
                     UNLOCK_EXIT(collector_fd_mutex, error_number, tid)
                 } else {
                     fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m fread() '%s'\n", tid, filename);
-                    continue;
+                }
+
+                if (fclose(stream) == EOF) {
+                    int errsv = errno;
+                    fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m fclose() '%s': ", tid, filename);
+                    errno = errsv;
+                    perror(NULL);
                 }
             } else {
                 int errsv = errno;
                 fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m fopen() '%s': ", tid, filename);
                 errno = errsv;
                 perror(NULL);
-                continue;
             }
+
+            free(filename);
         } else {
             if (errno == 0) {
                 pthread_exit(NULL);

@@ -8,9 +8,13 @@
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <signal.h>
+#include <time.h>
 #include <utils.h>
 #include <queue.h>
 #include <threadpool.h>
+
+volatile sig_atomic_t sigexit = 0;
 
 void info(char pathname[]);
 void usage();
@@ -26,8 +30,45 @@ int isNumber(const char *s, long *n);
 void sanitize_filename(char filename[], int last);
 void read_dir(char dirname[], Queue_t *requests, char progname[]);
 void cleanup();
+void sigexit_handler(int signo);
 
 int main(int argc, char *argv[]) {
+    sigset_t mask, oldmask;
+    
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGHUP);
+    sigaddset(&mask, SIGINT); 
+    sigaddset(&mask, SIGQUIT);
+    sigaddset(&mask, SIGTERM);
+
+    int error_number;
+    
+    if ((error_number = pthread_sigmask(SIG_BLOCK, &mask, &oldmask)) != 0) {
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m pthread_sigmask(): %s\n", argv[0], strerror(error_number));
+        exit(error_number);
+    }
+    
+    struct sigaction sa;
+
+    memset(&sa, 0, sizeof(sa));   
+    sa.sa_handler = sigexit_handler;
+   
+    SYSCALL_EXIT(argv[0], "sigaction 'SIGHUP'", sigaction(SIGHUP, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction 'SIGINT'", sigaction(SIGINT, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction 'SIGQUIT'", sigaction(SIGQUIT, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction 'SIGTERM'", sigaction(SIGTERM, &sa, NULL))
+
+    memset(&sa, 0, sizeof(sa));   
+    sa.sa_handler = SIG_IGN;
+
+    SYSCALL_EXIT(argv[0], "sigaction 'SIGPIPE'", sigaction(SIGPIPE, &sa, NULL))
+
+
+    if ((error_number = pthread_sigmask(SIG_SETMASK, &oldmask, NULL)) != 0) {
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m pthread_sigmask(): %s\n", argv[0], strerror(error_number));
+        exit(error_number);
+    }
+
     // Default options
     long pool_size = 4, queue_size = 8, delay = 0;
     char *dirname = NULL;
@@ -246,15 +287,71 @@ int main(int argc, char *argv[]) {
         exit(errsv);
     }
 
+    struct timespec base_request, request, remaining;
+
+    if (delay) {
+        base_request.tv_sec = delay / 1000;
+        base_request.tv_nsec = (delay % 1000) * 1000000;
+        request = base_request;
+    }
+
     char *filename;
-    
-    while ((errno = 0, filename = popQueue(requests)) != NULL) {
-        executeThreadPool(pool, filename);
+
+    while (!sigexit) {
+        if ((errno = 0, filename = popQueue(requests)) != NULL) {
+            if (executeThreadPool(pool, filename) == -1) {
+                errsv = errno;
+                fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m executeThreadPool(): %s\n", argv[0], strerror(errsv)); 
+                deleteQueue(requests);
+                shutdownThreadPool(pool);
+                close(cfd);
+                close(sfd);
+                exit(errsv);
+            }
+        } else if (errno == 0) {
+            break;
+        } else {
+            errsv = errno;
+            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m popQueue(): %s\n", argv[0], strerror(errsv)); 
+            deleteQueue(requests);
+            shutdownThreadPool(pool);
+            close(cfd);
+            close(sfd);
+            exit(errsv);
+        }
+
+        if (delay) {
+            while (nanosleep(&request, &remaining) != 0) {
+                if (errno == EINTR) {
+                    if (sigexit) {
+                        break;
+                    } else {
+                        request = remaining;
+                    } 
+                } else {
+                    errsv = errno;
+                    fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m nanosleep(): %s\n", argv[0], strerror(errsv)); 
+                    deleteQueue(requests);
+                    shutdownThreadPool(pool);
+                    close(cfd);
+                    close(sfd);
+                    exit(errsv);
+                }
+            }
+
+            request = base_request;
+        }
     }
 
     deleteQueue(requests);
-
-    shutdownThreadPool(pool);
+    
+    if (shutdownThreadPool(pool) ==  -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m shutdownThreadPool(): %s\n", argv[0], strerror(errsv));
+        close(cfd);
+        close(sfd);
+        exit(errsv);
+    }
 
     opcode = -1;
 
@@ -263,6 +360,19 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m writen() 'opcode: exit': %s\n", argv[0], strerror(errsv)); 
         close(cfd);
         close(sfd);
+        exit(errsv);
+    }
+
+    if (close(cfd) == -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m close() 'collector socket': %s\n", argv[0], strerror(errsv));
+        close(sfd);
+        exit(errsv);
+    }
+
+    if (close(sfd) == -1) {
+        errsv = errno;
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m close() 'farm socket': %s\n", argv[0], strerror(errsv));
         exit(errsv);
     }
 
@@ -402,4 +512,14 @@ void read_dir(char dirname[], Queue_t *requests, char progname[]) {
 
 void cleanup() {
     unlink(SOCK_PATH);
+}
+
+void sigexit_handler(int signo) {
+    switch (signo) {
+        case SIGHUP:
+        case SIGINT:
+        case SIGQUIT:
+        case SIGTERM:
+            sigexit = 1;
+    }
 }
