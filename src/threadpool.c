@@ -102,7 +102,7 @@ static void *worker_fun(void *arg) {
     }
 }
 
-Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int socket_fd) {
+Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int socket_fd, pthread_mutex_t *collector_fd_mutex) {
     if((pool_size == 0) || (queue_size == 0) || (socket_fd < 0)) {
 	    errno = EINVAL;
         return NULL;
@@ -134,32 +134,10 @@ Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int socket_fd)
         return NULL;
     }
 
-    if ((pool->collector_fd_mutex = malloc(sizeof(pthread_mutex_t))) == NULL) {
-        int errsv = errno;
-
-        deleteConcurrentQueue(pool->tasks);
-        free(pool->worker_threads);
-        free(pool);
-        
-        fprintf(stderr, "\x1B[1;31merror:\x1B[0m malloc()\n");
-        errno = errsv;
-        return NULL;
-    }
+    pool->collector_fd_mutex = collector_fd_mutex;
+    pool->pool_size = 0;
 
     int error_number;
-
-    if ((error_number = pthread_mutex_init(pool->collector_fd_mutex, NULL)) != 0) {
-        deleteConcurrentQueue(pool->tasks);
-        free(pool->worker_threads);
-        free(pool->collector_fd_mutex);
-        free(pool);
-        
-        fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_mutex_init()\n");
-        errno = error_number;
-        return NULL;
-    }
-
-    pool->pool_size = 0;
 
     for(size_t i = 0; i < pool_size; i++) {
         Args_t *args;
@@ -175,7 +153,7 @@ Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int socket_fd)
         args->tid = i + 1;
         args->tasks = pool->tasks;
         args->collector_fd = socket_fd;
-        args->collector_fd_mutex = pool->collector_fd_mutex;
+        args->collector_fd_mutex = collector_fd_mutex;
 
         if((error_number = pthread_create(&pool->worker_threads[i], NULL, worker_fun, args)) != 0) {
             fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_create()\n");
@@ -220,13 +198,6 @@ int shutdownThreadPool(Threadpool_t *pool) {
 
     deleteConcurrentQueue(pool->tasks);
 
-    if ((error_number = pthread_mutex_destroy(pool->collector_fd_mutex)) != 0) {
-        fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_mutex_destroy()\n");
-	    errno = error_number;
-	    return -1;
-    }
-
-    free(pool->collector_fd_mutex);
     free(pool->worker_threads);
     free(pool);
 

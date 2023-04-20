@@ -14,7 +14,7 @@ typedef struct Threadpool {
 /*
 
  */
-extern Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int socket_fd);
+extern Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int socket_fd, pthread_mutex_t *collector_fd_mutex);
 
 /*
 

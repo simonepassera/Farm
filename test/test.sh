@@ -2,13 +2,12 @@
 
 cd ./bin
 
-if [ ! -e generafile ];
-then
-    echo "Compilare generafile, eseguibile mancante!";
+if [ ! -e generafile ]; then
+    echo "Compilare generafile, eseguibile mancante!"
     exit 1
 fi
-if [ ! -e farm ];
-then
+
+if [ ! -e farm ]; then
     echo "Compilare farm, eseguibile mancante!"
     exit 1
 fi
@@ -87,10 +86,9 @@ else
     echo "test3 passed"
 fi
 
-
 #
 # esecuzione con valgrind. Se valgrind trova dei problemi esce con 
-# exit status 1.
+# exit status 1
 #
 valgrind --error-exitcode=1 --log-file=/dev/null ./farm -d testdir file* 2>&1 > /dev/null
 if [[ $? != 0 ]]; then
