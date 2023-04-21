@@ -565,7 +565,7 @@ static void *sigprint_handler_thread(void *arg) {
                 continue;
             } else {
                 int errsv = errno;
-                fprintf(stderr, "sigprint_handler_thread[0]: \x1B[1;31merror:\x1B[0m sigtimedwait(): ");
+                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m sigtimedwait(): ", tid);
                 errno = errsv;
                 perror(NULL);
                 exit(errsv);
@@ -575,7 +575,7 @@ static void *sigprint_handler_thread(void *arg) {
 
             if (writen(cfd, &opcode, sizeof(int)) == -1) {
                 int errsv = errno;
-                fprintf(stderr, "sigprint_handler_thread[0]: \x1B[1;31merror:\x1B[0m writen() 'opcode: print': "); 
+                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m writen() 'opcode: print': ", tid); 
                 errno = errsv;
                 perror(NULL);
                 exit(errsv);

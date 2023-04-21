@@ -13,11 +13,11 @@ ConcurrentQueue_t *initConcurrentQueue(size_t n) {
         return NULL;
     }
 
-    ConcurrentQueue_t *q = calloc(sizeof(ConcurrentQueue_t), 1);
+    ConcurrentQueue_t *q;
 
-    if (q == NULL) {
+    if ((q = malloc(sizeof(ConcurrentQueue_t))) == NULL) {
         int errsv = errno;
-	    fprintf(stderr, "\x1B[1;31merror:\x1B[0m calloc()\n");
+	    fprintf(stderr, "\x1B[1;31merror:\x1B[0m malloc()\n");
         errno = errsv;
         return NULL;
     }
@@ -34,17 +34,29 @@ ConcurrentQueue_t *initConcurrentQueue(size_t n) {
 
     if ((error_number = pthread_mutex_init(&q->mutex, NULL)) != 0) {
 	    fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_mutex_init()\n");
-	    goto error;
+        free(q->buf);
+        free(q);
+        errno = error_number;
+        return NULL;
     }
 
     if ((error_number = pthread_cond_init(&q->cond_full, NULL)) != 0) {
         fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_cond_init() 'cond_full'\n");
-        goto error;
+        pthread_mutex_destroy(&q->mutex);
+        free(q->buf);
+        free(q);
+        errno = error_number;
+        return NULL;
     }
 
     if ((error_number = pthread_cond_init(&q->cond_empty, NULL)) != 0) {
         fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_cond_init() 'cond_empty'\n");
-        goto error;
+        pthread_mutex_destroy(&q->mutex);
+        pthread_cond_destroy(&q->cond_full);
+        free(q->buf);
+        free(q);
+        errno = error_number;
+        return NULL;
     }
 
     q->head = 0;
@@ -55,17 +67,6 @@ ConcurrentQueue_t *initConcurrentQueue(size_t n) {
     q->num_cons = 0;
 
     return q;
-
-    error:
-
-    if (&q->mutex != NULL) pthread_mutex_destroy(&q->mutex);
-    if (&q->cond_full != NULL) pthread_cond_destroy(&q->cond_full);
-    if (&q->cond_empty) pthread_cond_destroy(&q->cond_empty);
-    if (q->buf != NULL) free(q->buf); 
-    free(q);
-
-    errno = error_number;
-    return NULL;
 }
 
 void deleteConcurrentQueue(ConcurrentQueue_t *q) {
@@ -75,10 +76,10 @@ void deleteConcurrentQueue(ConcurrentQueue_t *q) {
             q->head += ((q->head + 1) >= q->qsize) ? (1 - q->qsize) : 1;
         }
 
-        if (&q->mutex != NULL) pthread_mutex_destroy(&q->mutex);
-        if (&q->cond_full != NULL) pthread_cond_destroy(&q->cond_full);
-        if (&q->cond_empty) pthread_cond_destroy(&q->cond_empty);
-        if (q->buf != NULL) free(q->buf); 
+        pthread_mutex_destroy(&q->mutex);
+        pthread_cond_destroy(&q->cond_full);
+        pthread_cond_destroy(&q->cond_empty);
+        free(q->buf); 
         
         free(q);
     }

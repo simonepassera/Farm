@@ -14,7 +14,7 @@ typedef struct Args {
 
 static void *worker_fun(void *arg) {
     if (arg == NULL) {
-        fprintf(stderr, "thread[%lu]: \x1B[1;31merror:\x1B[0m Invalid argument\n", pthread_self());
+        fprintf(stderr, "worker_thread: \x1B[1;31merror:\x1B[0m Invalid argument\n");
         exit(EINVAL);
     }
 
