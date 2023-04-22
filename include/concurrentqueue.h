@@ -1,7 +1,7 @@
 #ifndef __CONCURRENTQUEUE_H__
 #define __CONCURRENTQUEUE_H__
 
-// Queue data structure
+// Concurrent queue data structure
 typedef struct ConcurrentQueue {
     char **buf;
     size_t head;
@@ -16,6 +16,9 @@ typedef struct ConcurrentQueue {
 } ConcurrentQueue_t;
 
 
+/* -------------------- ConcurrentQueue interface -------------------- */
+
+
 /*  Initialize a concurrent queue of size 'n'. 
  *
  *  RETURN VALUE: pointer to the new queue on success
@@ -23,7 +26,7 @@ typedef struct ConcurrentQueue {
  */
 extern ConcurrentQueue_t *initConcurrentQueue(size_t n);
 
-// Delete a queue allocated with initConcurrentQueue() pointed to by q.
+// Delete a queue allocated with initConcurrentQueue() pointed to by q
 extern void deleteConcurrentQueue(ConcurrentQueue_t *q);
 
 /*  Insert filename into the queue pointed to by q.

@@ -14,14 +14,18 @@ typedef struct Queue {
     size_t qlen; 
 } Queue_t;
 
-/*  Initialize a queue. 
+
+/* -------------------- Queue interface -------------------- */
+
+
+/*  Initialize an unbounded queue. 
  *
  *  RETURN VALUE: pointer to the new queue on success
  *                NULL on error (errno is set)
  */
 extern Queue_t *initQueue();
 
-// Delete a queue allocated with initQueue() pointed to by q.
+// Delete a queue allocated with initQueue() pointed to by q
 extern void deleteQueue(Queue_t *q);
 
 /*  Insert filename into the queue pointed to by q.
@@ -38,7 +42,7 @@ extern int pushQueue(Queue_t *q, char filename[]);
  */
 extern char *popQueue(Queue_t *q);
 
-// Return the current length of the queue passed as a parameter.
+// Return the current length of the queue passed as a parameter
 extern size_t lengthQueue(Queue_t *q);
 
 #endif /* __QUEUE_H__ */

@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <pthread.h>
 
+// Pathname to UNIX socket 
 #define SOCK_PATH "farm.sck"
 
 #define SYSCALL_EXIT(progname, message, syscall)                    \
@@ -61,7 +62,19 @@
         return return_value;                                                \
     }
 
+/*  Read 'n' byte from file descriptor 'fd' into the buffer starting at 'buf'. 
+ *
+ *  RETURN VALUE: n on success
+ *                0 indicates end of file
+ *                -1 on error (errno is set)
+ */
 extern int readn(int fd, void *buf, size_t n);
+
+/*  Write 'n' byte from the buffer starting at 'buf' to file descriptor 'fd'.
+ *
+ *  RETURN VALUE: n on success
+ *                -1 on error (errno is set)
+ */
 extern int writen(int fd, void *buf, size_t n);
 
 #endif /* __UTILS_H__ */
