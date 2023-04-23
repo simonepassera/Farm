@@ -87,6 +87,15 @@ int main(int argc, char *argv[]) {
 
     SYSCALL_EXIT(argv[0], "sigaction 'SIGPIPE'", sigaction(SIGPIPE, &sa, NULL))
 
+    // Install signal handler for signal SIGHUP, SIGINT, SIGQUIT, SIGTERM
+    memset(&sa, 0, sizeof(sa));   
+    sa.sa_handler = sigexit_handler;
+        
+    SYSCALL_EXIT(argv[0], "sigaction 'SIGHUP'", sigaction(SIGHUP, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction 'SIGINT'", sigaction(SIGINT, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction 'SIGQUIT'", sigaction(SIGQUIT, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction 'SIGTERM'", sigaction(SIGTERM, &sa, NULL))
+
     // Create a new UNIX socket
     if ((sfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
         int errsv = errno;
@@ -336,15 +345,6 @@ int main(int argc, char *argv[]) {
             deleteQueue(requests);
             exit(errsv);
         }
-
-        // Install signal handler for signal SIGHUP, SIGINT, SIGQUIT, SIGTERM
-        memset(&sa, 0, sizeof(sa));   
-        sa.sa_handler = sigexit_handler;
-        
-        SYSCALL_EXIT(argv[0], "sigaction 'SIGHUP'", sigaction(SIGHUP, &sa, NULL))
-        SYSCALL_EXIT(argv[0], "sigaction 'SIGINT'", sigaction(SIGINT, &sa, NULL))
-        SYSCALL_EXIT(argv[0], "sigaction 'SIGQUIT'", sigaction(SIGQUIT, &sa, NULL))
-        SYSCALL_EXIT(argv[0], "sigaction 'SIGTERM'", sigaction(SIGTERM, &sa, NULL))
 
         // Spawn signal handler thread
         pthread_t sigprint_handler_tid;
