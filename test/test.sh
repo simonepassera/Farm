@@ -55,6 +55,8 @@ mv file19.dat file8.dat testdir
 mkdir -p testdir/testdir2
 mv file111.dat file150.dat testdir/testdir2
 
+printf "\e[1;36mRUNNING TEST:\e[0m\n"
+
 # esecuzione con 2 thread e coda lunga 1
 ./farm -n 2 -q 1 file* -d testdir | grep "file*" | awk '{print $1,$2}' | diff - expected.txt
 if [[ $? != 0 ]]; then
@@ -104,3 +106,36 @@ if [[ $? != 0 ]]; then
 else
     echo "test5 passed"
 fi
+
+# esempi di utilizzo
+printf "\e[1;36mEXAMPLES:\e[0m\n"
+
+printf "\e[1mNo arguments:\e[0m\n\e[1;32m./farm\e[0m\n"
+./farm
+
+printf "\n\e[1mDisplay help message:\e[0m\n\e[1;32m./farm -h\e[0m\n"
+./farm -h
+
+printf "\n\e[1mFile 'not_exist.dat' does not exist:\e[0m\n\e[1;32m./farm not_exist.dat\e[0m\n"
+./farm not_exist.dat
+
+printf "\n\e[1mNegative worker threads number:\e[0m\n\e[1;32m./farm -n -4 file3.dat\e[0m\n"
+./farm -n -4 file3.dat
+
+printf "\n\e[1mPass socket file 'farm.sck' as argument:\e[0m\n\e[1;32m./farm file5.dat file20.dat farm.sck\e[0m\n"
+./farm file5.dat file20.dat farm.sck
+
+printf "\n\e[1mPass txt file 'expected.txt' as argument:\e[0m\n\e[1;32m./farm expected.txt file4.dat\e[0m\n"
+./farm expected.txt file4.dat
+
+printf "\n\e[1mExceed the maximum filename length:\e[0m\n\e[1;32m./farm -d testdir/testdir2\e[0m\n"
+touch testdir/testdir2/fileloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong.dat
+./farm -d testdir/testdir2
+rm testdir/testdir2/fileloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong.dat
+
+printf "\n\e[1mSend SIGUSR1 signal after 2 seconds:\e[0m\n\e[1;32m./farm -t 200 -n 5 -q 3 file*.dat -d testdir\e[0m\n"
+./farm -t 200 -n 5 -q 3 file*.dat -d testdir &
+pid=$!
+sleep 2
+kill -SIGUSR1 $pid
+wait $pid

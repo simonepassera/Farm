@@ -9,13 +9,13 @@
 // Pathname to UNIX socket 
 #define SOCK_PATH "farm.sck"
 
-#define SYSCALL_EXIT(progname, message, syscall)                    \
-    if (syscall == -1) {                                            \
-        int errsv = errno;                                          \
-        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m ", progname);  \
-        errno = errsv;                                              \
-        perror(message);                                            \
-        exit(errsv);                                                \
+#define SYSCALL_EXIT(progname, message, syscall)                        \
+    if ((syscall) == -1) {                                              \
+        int errsv = errno;                                              \
+        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m ", progname);      \
+        errno = errsv;                                                  \
+        perror(message);                                                \
+        exit(errsv);                                                    \
     }
 
 #define LOCK_EXIT(mutex, error_number, tid)                                                 \

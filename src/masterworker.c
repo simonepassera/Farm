@@ -97,11 +97,7 @@ int main(int argc, char *argv[]) {
     SYSCALL_EXIT(argv[0], "sigaction 'SIGTERM'", sigaction(SIGTERM, &sa, NULL))
 
     // Create a new UNIX socket
-    if ((sfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-        int errsv = errno;
-        fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m socket(): %s\n", argv[0], strerror(errsv)); 
-        exit(errsv);
-    }
+    SYSCALL_EXIT(argv[0], "socket()", sfd = socket(AF_UNIX, SOCK_STREAM, 0))
 
     // Assign the address specified by 'SOCK_PATH' to the socket 'sfd'
     struct sockaddr_un addr;
@@ -139,7 +135,10 @@ int main(int argc, char *argv[]) {
     if (cpid == 0) {
         // Collector process
         
+        // Close socket of Master process
         close(sfd);
+
+        // Exec main function
         exec_collector();
     } else {
         // Master process

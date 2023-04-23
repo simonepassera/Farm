@@ -19,7 +19,6 @@ TARGET = $(BINDIR)/farm
 all: directories $(TARGET)
 
 test: all $(BINDIR)/generafile
-	@printf "\e[1;36mRUNNING TEST:\e[0m\n"
 	@$(TESTDIR)/test.sh
 
 directories:
