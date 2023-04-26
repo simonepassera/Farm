@@ -28,8 +28,8 @@ directories:
 clean:
 	rm -f $(TARGET) $(BINDIR)/generafile
 
-cleanall: clean
-	rm -f $(OBJDIR)/*.o
+cleanall:
+	rm -rf $(OBJDIR) $(BINDIR)
 
 $(BINDIR)/farm: $(SRCDIR)/masterworker.c $(OBJDIR)/collector.o $(OBJDIR)/queue.o $(OBJDIR)/concurrentqueue.o $(OBJDIR)/threadpool.o $(OBJDIR)/utils.o
 	$(CC) $^ -o $@ $(PTHREAD) $(INCLUDES) $(CFLAGS) $(OPTFLAGS)

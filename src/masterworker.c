@@ -32,12 +32,6 @@ static int cfd;
 // Termination flag
 static volatile sig_atomic_t sigexit = 0;
 
-// Print info message
-static void info(char pathname[]);
-
-// Print help message
-static void usage();
-
 /*  Check if the string 's' is a number and store in 'n'.
  *
  *  RETURN VALUE: 0 on success
@@ -46,14 +40,20 @@ static void usage();
  */
 static int isNumber(const char *s, long *n);
 
+// Print info message
+static void info(char pathname[]);
+
+// Print help message
+static void usage();
+
+// Function registered using atexit()
+static void cleanup();
+
 // Remove extra '/' characters from 'filename'
 static void sanitize_filename(char filename[], int last);
 
 // Search recursively inside 'dirname' directory, valid files, and puts them in the 'requests' queue
 static void read_dir(char dirname[], Queue_t *requests, char progname[]);
-
-// Function registered using atexit()
-static void cleanup();
 
 // Signal handler function established for signal SIGHUP, SIGINT, SIGQUIT, SIGTERM
 static void sigexit_handler(int signo);
