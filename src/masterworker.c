@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/stat.h>
@@ -85,25 +86,25 @@ int main(int argc, char *argv[]) {
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = SIG_IGN;
 
-    SYSCALL_EXIT(argv[0], "sigaction 'SIGPIPE'", sigaction(SIGPIPE, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction() 'SIGPIPE'", sigaction(SIGPIPE, &sa, NULL))
 
     // Install signal handler for signal SIGHUP, SIGINT, SIGQUIT, SIGTERM
     memset(&sa, 0, sizeof(sa));   
     sa.sa_handler = sigexit_handler;
         
-    SYSCALL_EXIT(argv[0], "sigaction 'SIGHUP'", sigaction(SIGHUP, &sa, NULL))
-    SYSCALL_EXIT(argv[0], "sigaction 'SIGINT'", sigaction(SIGINT, &sa, NULL))
-    SYSCALL_EXIT(argv[0], "sigaction 'SIGQUIT'", sigaction(SIGQUIT, &sa, NULL))
-    SYSCALL_EXIT(argv[0], "sigaction 'SIGTERM'", sigaction(SIGTERM, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction() 'SIGHUP'", sigaction(SIGHUP, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction() 'SIGINT'", sigaction(SIGINT, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction() 'SIGQUIT'", sigaction(SIGQUIT, &sa, NULL))
+    SYSCALL_EXIT(argv[0], "sigaction() 'SIGTERM'", sigaction(SIGTERM, &sa, NULL))
 
     // Create a new UNIX socket
     SYSCALL_EXIT(argv[0], "socket()", sfd = socket(AF_UNIX, SOCK_STREAM, 0))
 
-    // Assign the address specified by 'SOCK_PATH' to the socket 'sfd'
+    // Assign the address specified by 'SOCK_PATHNAME' to the socket 'sfd'
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, SOCK_PATH, sizeof(addr.sun_path) - 1);
+    strncpy(addr.sun_path, SOCK_PATHNAME, sizeof(addr.sun_path) - 1);
         
     if (bind(sfd, (struct sockaddr*) &addr, sizeof(addr)) == -1) {
         int errsv = errno;
@@ -116,7 +117,7 @@ int main(int argc, char *argv[]) {
     if (listen(sfd, SOMAXCONN) == -1) {
         int errsv = errno;
         fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m listen(): %s\n", argv[0], strerror(errsv));
-        unlink(SOCK_PATH);
+        unlink(SOCK_PATHNAME);
         close(sfd);
         exit(errsv);
     }
@@ -127,7 +128,7 @@ int main(int argc, char *argv[]) {
     if ((cpid = fork()) == -1) {
         int errsv = errno;
         fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m fork(): %s\n", argv[0], strerror(errsv));
-        unlink(SOCK_PATH); 
+        unlink(SOCK_PATHNAME); 
         close(sfd);
         exit(errsv);
     }
@@ -154,7 +155,7 @@ int main(int argc, char *argv[]) {
         // Register the cleanup function
         if (atexit(cleanup) != 0) {
             fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m atexit()\n", argv[0]);
-            unlink(SOCK_PATH);
+            unlink(SOCK_PATHNAME);
             close(cfd);
             close(sfd);
             exit(EXIT_FAILURE);
@@ -221,7 +222,7 @@ int main(int argc, char *argv[]) {
 
                     // Check if pathname is too long
                     if (strlen(optarg) > PATHNAME_MAX)
-                        fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': File name too long (FILENAME_MAX = %d)\n", argv[0], optarg, PATHNAME_MAX);
+                        fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': File name too long (PATHNAME_MAX = %d)\n", argv[0], optarg, PATHNAME_MAX);
                     else
                         dirname = optarg;
                     break;
@@ -290,7 +291,7 @@ int main(int argc, char *argv[]) {
 
             // Check if pathname is too long
             if (strlen(argv[optind]) > PATHNAME_MAX) {
-                fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': File name too long (FILENAME_MAX = %d)\n", argv[0], argv[optind], PATHNAME_MAX);
+                fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': File name too long (PATHNAME_MAX = %d)\n", argv[0], argv[optind], PATHNAME_MAX);
                 optind++;
                 continue;
             }
@@ -310,18 +311,18 @@ int main(int argc, char *argv[]) {
         if (dirname != NULL) read_dir(dirname, requests, argv[0]);
 
         // Check if there are no files
-        int opcode;
+        int n_results;
 
-        if ((opcode = lengthQueue(requests)) == 0) {
+        if ((n_results = lengthQueue(requests)) == 0) {
             info(argv[0]);
             deleteQueue(requests);
             exit(EXIT_FAILURE);
         }
 
         // Send the number of filename to Collector process
-        if (writen(cfd, &opcode, sizeof(int)) == -1) {
+        if (writen(cfd, &n_results, sizeof(int)) == -1) {
             errsv = errno;
-            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m writen() 'opcode: queue_length': %s\n", argv[0], strerror(errsv)); 
+            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m writen() 'n_results': %s\n", argv[0], strerror(errsv)); 
             deleteQueue(requests);
             exit(errsv);
         }
@@ -431,11 +432,7 @@ int main(int argc, char *argv[]) {
         deleteQueue(requests);
         
         // Initiate an orderly shutdown of the thread pool in which previously submitted tasks are executed
-        if (shutdownThreadPool(pool) ==  -1) {
-            errsv = errno;
-            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m shutdownThreadPool(): %s\n", argv[0], strerror(errsv));
-            exit(errsv);
-        }
+        SYSCALL_EXIT(argv[0], "shutdownThreadPool()", shutdownThreadPool(pool))
 
         // Wait termination of signal handler thread
         sigexit = 1;
@@ -452,14 +449,37 @@ int main(int argc, char *argv[]) {
         }
 
         // Send 0 (exit) to Collector process
-        opcode = 0;
+        int opcode = 0;
+        
+        SYSCALL_EXIT(argv[0], "writen() 'opcode: 0 (exit)'", writen(cfd, &opcode, sizeof(int)))
 
-        if (writen(cfd, &opcode, sizeof(int)) == -1) {
-            errsv = errno;
-            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m writen() 'opcode: exit': %s\n", argv[0], strerror(errsv)); 
-            exit(errsv);
+        // Wait termination of Collector process
+        int wstatus;
+
+        while (waitpid(cpid, &wstatus, 0) == -1) {
+            // Check if it has been interrupted by a signal handler
+            if (errno != EINTR) {
+                errsv = errno;
+                fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m waitpid(): %s\n", argv[0], strerror(errsv)); 
+                exit(errsv);
+            }
         }
 
+        // Check the exit code
+        if (WIFEXITED(wstatus)) {
+            if (WEXITSTATUS(wstatus) != EXIT_SUCCESS) {
+                fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m collector: Exited with code (%d)\n", argv[0], WEXITSTATUS(wstatus)); 
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            // Check if Collector process was killed by a signal
+            if (WIFSIGNALED(wstatus)) {
+                fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m collector: Killed by signal (%d)\n", argv[0], WTERMSIG(wstatus)); 
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        // Success
         exit(EXIT_SUCCESS);
     }
 }
@@ -568,7 +588,7 @@ static void read_dir(char dirname[], Queue_t *requests, char progname[]) {
         len_filename = strlen(entry->d_name);
 
 	    if((len_dirname + len_filename + 1) > PATHNAME_MAX) {
-            fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s/%s': File name too long (FILENAME_MAX = %d)\n", progname, dirname, entry->d_name, PATHNAME_MAX);
+            fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s/%s': File name too long (PATHNAME_MAX = %d)\n", progname, dirname, entry->d_name, PATHNAME_MAX);
             continue;
 	    }
 	    		    
@@ -628,7 +648,7 @@ static void read_dir(char dirname[], Queue_t *requests, char progname[]) {
 
 // Function registered using atexit()
 static void cleanup() {
-    unlink(SOCK_PATH);
+    unlink(SOCK_PATHNAME);
     close(cfd);
     close(sfd);
 }
@@ -686,7 +706,7 @@ static void *sigprint_handler_thread(void *arg) {
             // Send -1 (print) to Collector process
             if (writen(cfd, &opcode, sizeof(int)) == -1) {
                 int errsv = errno;
-                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m writen() 'opcode: print': ", tid); 
+                fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m writen() 'opcode: -1 (print)': ", tid); 
                 errno = errsv;
                 perror(NULL);
                 exit(errsv);

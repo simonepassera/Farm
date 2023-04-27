@@ -75,7 +75,7 @@ void exec_collector() {
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, SOCK_PATH, sizeof(addr.sun_path) - 1);
+    strncpy(addr.sun_path, SOCK_PATHNAME, sizeof(addr.sun_path) - 1);
 
     // Connect to the Master process
     if (connect(sfd, (struct sockaddr*) &addr, sizeof(addr)) == -1) {
@@ -128,7 +128,7 @@ void exec_collector() {
             close(sfd);
             exit(errsv);
         } else if (read_return == 0) {
-            fprintf(stderr, "collector: \x1B[1;31merror:\x1B[0m readn() 'opcode': EOF\n");
+            fprintf(stderr, "collector: \x1B[1;31merror:\x1B[0m readn() 'opcode': End of file\n");
             deleteResults(results, results_index);
             close(sfd);
             exit(EXIT_FAILURE);
@@ -183,7 +183,7 @@ void exec_collector() {
                     close(sfd);
                     exit(errsv);
                 } else if (read_return == 0) {
-                    fprintf(stderr, "collector: \x1B[1;31merror:\x1B[0m readn() 'filename': EOF\n");
+                    fprintf(stderr, "collector: \x1B[1;31merror:\x1B[0m readn() 'filename': End of file\n");
                     deleteResults(results, results_index);
                     close(sfd);
                     exit(EXIT_FAILURE);
@@ -197,7 +197,7 @@ void exec_collector() {
                     close(sfd);
                     exit(errsv);
                 } else if (read_return == 0) {
-                    fprintf(stderr, "collector: \x1B[1;31merror:\x1B[0m readn() 'result': EOF\n");
+                    fprintf(stderr, "collector: \x1B[1;31merror:\x1B[0m readn() 'result': End of file\n");
                     deleteResults(results, results_index);
                     close(sfd);
                     exit(EXIT_FAILURE);

@@ -6,9 +6,6 @@
 #include <errno.h>
 #include <pthread.h>
 
-// Pathname to UNIX socket 
-#define SOCK_PATH "farm.sck"
-
 #define SYSCALL_EXIT(progname, message, syscall)                        \
     if ((syscall) == -1) {                                              \
         int errsv = errno;                                              \
