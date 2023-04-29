@@ -13,7 +13,7 @@ INCLUDES = -I $(INCDIR)
 
 TARGET = $(BINDIR)/farm
 
-.PHONY: all test directories clean
+.PHONY: all test directories clean cleanall
 
 # target rule
 all: directories $(TARGET)
@@ -32,7 +32,7 @@ cleanall:
 	rm -rf $(OBJDIR) $(BINDIR)
 
 $(BINDIR)/farm: $(SRCDIR)/masterworker.c $(OBJDIR)/collector.o $(OBJDIR)/queue.o $(OBJDIR)/concurrentqueue.o $(OBJDIR)/threadpool.o $(OBJDIR)/utils.o
-	$(CC) $^ -o $@ $(PTHREAD) $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
+	$(CC) $^ -o $@ $(INCLUDES) $(PTHREAD) $(CFLAGS) $(OPTFLAGS)
 
 $(BINDIR)/generafile: $(SRCDIR)/generafile.c
 	$(CC) $< -o $@ $(CFLAGS) $(OPTFLAGS)
@@ -41,7 +41,7 @@ $(OBJDIR)/collector.o: $(SRCDIR)/collector.c $(INCDIR)/collector.h $(INCDIR)/uti
 	$(CC) $< -c -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
 
 $(OBJDIR)/threadpool.o: $(SRCDIR)/threadpool.c $(INCDIR)/threadpool.h $(INCDIR)/concurrentqueue.h $(INCDIR)/utils.h
-	$(CC) -c $< -o $@ $(PTHREAD) $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
+	$(CC) -c $< -o $@ $(INCLUDES) $(PTHREAD) $(CFLAGS) $(OPTFLAGS)
 
 $(OBJDIR)/queue.o: $(SRCDIR)/queue.c $(INCDIR)/queue.h
 	$(CC) -c $< -o $@ $(INCLUDES) $(CFLAGS) $(OPTFLAGS)
