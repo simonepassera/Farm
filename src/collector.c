@@ -203,7 +203,7 @@ void exec_collector() {
                     exit(EXIT_FAILURE);
                 }
 
-                // Check if master process send more results than 'n_results'
+                // Check if Master process send more results than 'n_results'
                 if (results_index >= ((size_t) n_results)) {
                     fprintf(stderr, "collector: \x1B[1;31merror:\x1B[0m Too many results\n");
                     deleteResults(results, results_index);

@@ -25,14 +25,14 @@ Queue_t *initQueue() {
     q->tail = NULL;    
     q->qlen = 0;
     
-    // Return pointer to queue
+    // Return pointer to the queue
     return q;
 }
 
 // Delete a queue allocated with initQueue() pointed to by q
 void deleteQueue(Queue_t *q) {
     if (q != NULL) {
-        // Free all filename if present
+        // Free all filenames if present
         if (q->qlen != 0) {
             Node_t *n;
 
@@ -55,7 +55,7 @@ void deleteQueue(Queue_t *q) {
  *                -1 on error (errno is set)
  */
 int pushQueue(Queue_t *q, char filename[]) {
-    // Check parameters
+    // Check arguments
     if ((q == NULL) || (filename == NULL)) {
         errno = EINVAL;
         return -1;
@@ -127,7 +127,7 @@ char *popQueue(Queue_t *q) {
     }
 } 
 
-// Return the current length of the queue passed as a parameter
+// Return the current length of the queue passed as an argument
 size_t lengthQueue(Queue_t *q) {
     // Check queue pointer
     if (q == NULL) {

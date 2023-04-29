@@ -76,14 +76,14 @@ ConcurrentQueue_t *initConcurrentQueue(size_t n) {
     q->num_prod = 0;
     q->num_cons = 0;
 
-    // Return pointer to concurrent queue
+    // Return pointer to the concurrent queue
     return q;
 }
 
 // Delete a queue allocated with initConcurrentQueue() pointed to by q
 void deleteConcurrentQueue(ConcurrentQueue_t *q) {
     if (q != NULL) {
-        // Free all filename if present
+        // Free all filenames if present
 	    while(q->head != q->tail) {
             free(q->buf[q->head]);
             q->head += ((q->head + 1) >= q->qsize) ? (1 - q->qsize) : 1;
@@ -106,7 +106,7 @@ void deleteConcurrentQueue(ConcurrentQueue_t *q) {
  *                -1 on error (errno is set)
  */
 int pushConcurrentQueue(ConcurrentQueue_t *q, char filename[]) {
-    // Check parameters, filename 'NULL' allowed for the worker thread termination protocol
+    // Check arguments, filename 'NULL' allowed for the Worker thread termination protocol
     if ((q == NULL)) {
         errno = EINVAL;
 	    return -1;

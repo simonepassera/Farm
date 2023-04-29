@@ -57,7 +57,7 @@ static void *worker_fun(void *arg) {
 
                     LOCK_EXIT(collector_fd_mutex, error_number, tid)
 
-                    // Send length of 'filename' to collector
+                    // Send length of 'filename' to Collector process
                     if (writen(collector_fd, &filename_size, sizeof(int)) == -1) {
                         int errsv = errno;
                         fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m writen() 'filename_size': ", tid);
@@ -66,7 +66,7 @@ static void *worker_fun(void *arg) {
                         exit(errsv);
                     }
 
-                    // Send 'filename' to collector
+                    // Send 'filename' to Collector process
                     if (writen(collector_fd, filename, filename_size) == -1) {
                         int errsv = errno;
                         fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m writen() 'filename': ", tid);
@@ -75,7 +75,7 @@ static void *worker_fun(void *arg) {
                         exit(errsv);
                     }
                     
-                    // Send result of 'filename' to collector
+                    // Send result of 'filename' to Collector process
                     if (writen(collector_fd, &result, sizeof(long)) == -1) {
                         int errsv = errno;
                         fprintf(stderr, "thread[%d]: \x1B[1;31merror:\x1B[0m writen() 'result': ", tid);
@@ -120,15 +120,15 @@ static void *worker_fun(void *arg) {
     }
 }
 
-/*  Create a new thread pool with 'pool_size' worker threads and internal queue of size 'queue_size'. 
+/*  Create a new thread pool with 'pool_size' Worker threads and internal queue of size 'queue_size'. 
  *  Worker threads send results to file descriptor 'collector_fd'.
- *  The variable 'collector_fd_mutex' ensure correct synchronization between threads.
+ *  The variable 'collector_fd_mutex' ensures correct synchronization between threads.
  *
  *  RETURN VALUE: pointer to the new thread pool on success
  *                NULL on error (errno is set)
  */
 Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int collector_fd, pthread_mutex_t *collector_fd_mutex) {
-    // Check parameters
+    // Check arguments
     if((pool_size == 0) || (queue_size == 0) || (collector_fd < 0) || (collector_fd_mutex == NULL)) {
 	    errno = EINVAL;
         return NULL;
@@ -144,7 +144,7 @@ Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int collector_
         return NULL;
     }
 
-    // Allocate array for worker threads ID
+    // Allocate array for Worker threads ID
     if ((pool->worker_threads = malloc(sizeof(pthread_t) * pool_size)) == NULL) {
         int errsv = errno;
         fprintf(stderr, "\x1B[1;31merror:\x1B[0m malloc()\n");
@@ -168,12 +168,12 @@ Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int collector_
     pool->collector_fd_mutex = collector_fd_mutex;
     pool->pool_size = 0;
 
-    // Create worker threads
+    // Create Worker threads
     Args_t *args;
     int error_number;
 
     for(size_t i = 0; i < pool_size; i++) {
-        // Allocate space for worker thread parameters
+        // Allocate space for Worker thread arguments
         if ((args = malloc(sizeof(Args_t))) == NULL) {
             int errsv = errno;
             shutdownThreadPool(pool);
@@ -188,7 +188,7 @@ Threadpool_t *initThreadPool(size_t pool_size, size_t queue_size, int collector_
         args->collector_fd = collector_fd;
         args->collector_fd_mutex = collector_fd_mutex;
 
-        // Spawn worker thread, exec 'worker_fun' function
+        // Spawn Worker thread, exec 'worker_fun' function
         if((error_number = pthread_create(&pool->worker_threads[i], NULL, worker_fun, args)) != 0) {
             fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_create()\n");
             free(args);
@@ -216,7 +216,7 @@ int shutdownThreadPool(Threadpool_t *pool) {
 	    return -1;
     }
 
-    // Insert a null pointer for each worker thread in the thread pool queue
+    // Insert a NULL pointer for each Worker thread in the thread pool queue
     for(int i = 0; i < pool->pool_size; i++) {
         if (pushConcurrentQueue(pool->tasks, NULL) != 0) {
             int errsv = errno;
@@ -226,7 +226,7 @@ int shutdownThreadPool(Threadpool_t *pool) {
         }
     }
 
-    // Wait for all worker threads to terminate
+    // Wait for all Worker threads to terminate
     for(int i = 0, error_number; i < pool->pool_size; i++) {
 	    if ((error_number = pthread_join(pool->worker_threads[i], NULL)) != 0) {
             fprintf(stderr, "\x1B[1;31merror:\x1B[0m pthread_join()\n");
@@ -250,7 +250,7 @@ int shutdownThreadPool(Threadpool_t *pool) {
  *                -1 on error (errno is set)
  */
 int submitThreadPool(Threadpool_t *pool, char filename[]) {
-    // Check parameters
+    // Check arguments
     if(pool == NULL || filename == NULL) {
 	    errno = EINVAL;
 	    return -1;

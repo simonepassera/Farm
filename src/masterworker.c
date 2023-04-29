@@ -24,7 +24,7 @@
 #define DELAY 0
 #define PATHNAME_MAX 255
 
-// Socket of Master process used to accept the connection request of the collector process
+// Socket of Master process used to accept the connection request of the Collector process
 static int sfd;
 
 // Connection socket with the Collector process
@@ -33,10 +33,10 @@ static int cfd;
 // Termination flag
 static volatile sig_atomic_t sigexit = 0;
 
-/*  Check if the string 's' is a number and store in 'n'.
+/*  Check if the string 's' is a number and store it in 'n'.
  *
  *  RETURN VALUE: 0 on success
- *                1 if is not a number
+ *                1 not a number
  *                2 on overflow/underflow  
  */
 static int isNumber(const char *s, long *n);
@@ -53,10 +53,10 @@ static void cleanup();
 // Remove extra '/' characters from 'filename'
 static void sanitize_filename(char filename[], int last);
 
-// Search recursively inside 'dirname' directory, valid files, and puts them in the 'requests' queue
+// Search recursively inside 'dirname' directory, valid files, and put them in the 'requests' queue
 static void read_dir(char dirname[], Queue_t *requests, char progname[]);
 
-// Signal handler function established for signal SIGHUP, SIGINT, SIGQUIT, SIGTERM
+// Signal handler established for signal SIGHUP, SIGINT, SIGQUIT, SIGTERM
 static void sigexit_handler(int signo);
 
 // Signal handler thread, send print command to Collector process when signal SIGUSR1 is caught
@@ -251,7 +251,7 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        // Create queue where store all filenames
+        // Create queue where storing all filenames
         Queue_t *requests;
 
         if ((requests = initQueue()) == NULL) {
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
                 exit(errsv);
             }
             
-            // Check if filename is regular file
+            // Check if filename is a regular file
             if (!S_ISREG(statbuf.st_mode)) {
                 fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': Not a regular file\n", argv[0], argv[optind]);
                 optind++;
@@ -307,7 +307,7 @@ int main(int argc, char *argv[]) {
             optind++;
         }
 
-        // Search inside 'dirname' directory, valid files, and puts them in the 'requests' queue
+        // Search inside 'dirname' directory, valid files, and put them in the 'requests' queue
         if (dirname != NULL) read_dir(dirname, requests, argv[0]);
 
         // Check if there are no files
@@ -319,7 +319,7 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        // Send the number of filename to Collector process
+        // Send the number of filenames to Collector process
         if (writen(cfd, &n_results, sizeof(int)) == -1) {
             errsv = errno;
             fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m writen() 'n_results': %s\n", argv[0], strerror(errsv)); 
@@ -358,7 +358,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Unblock signal SIGHUP, SIGINT, SIGQUIT, SIGTERM
-        // Signal SIGUSR1 remain blocked
+        // Signal SIGUSR1 remains blocked
         sigdelset(&mask, SIGUSR1);
 
         if ((error_number = pthread_sigmask(SIG_UNBLOCK , &mask, NULL)) != 0) {
@@ -411,7 +411,7 @@ int main(int argc, char *argv[]) {
                             // Exit to start termination protocol
                             break;
                         } else {
-                            // Suspend execution for the time remaining
+                            // Suspend execution for the remaining time
                             time_request = time_remaining;
                         } 
                     } else {
@@ -506,10 +506,10 @@ static void usage() {
     fprintf(stderr, "  \x1B[1mSIGHUP - SIGINT - SIGQUIT - SIGTERM\x1B[0m\x1B[44Gcomplete any tasks in the queue and terminate the process\n");
 }
 
-/*  Check if the string 's' is a number and store in 'n'.
+/*  Check if the string 's' is a number and store it in 'n'.
  *
  *  RETURN VALUE: 0 on success
- *                1 if is not a number
+ *                1 not a number
  *                2 on overflow/underflow  
  */
 static int isNumber(const char *s, long *n) {
@@ -542,7 +542,7 @@ static int isNumber(const char *s, long *n) {
 
 // Remove extra '/' characters from 'filename'
 static void sanitize_filename(char filename[], int remove_last) {
-    // Find multiple '/' character and raplaces whth one  
+    // Find multiple '/' characters and raplace them with only one  
     int final_index = 0;
 
     for (int i = 0, flag = 0; filename[i] != '\0'; i++) {
@@ -564,7 +564,7 @@ static void sanitize_filename(char filename[], int remove_last) {
         filename[final_index] = '\0';
 }
 
-// Search recursively inside 'dirname' directory, valid files, and puts them in the 'requests' queue
+// Search recursively inside 'dirname' directory, valid files, and put them in the 'requests' queue
 static void read_dir(char dirname[], Queue_t *requests, char progname[]) {
     // Open 'dirname' directory
     DIR *dirp;
@@ -612,7 +612,7 @@ static void read_dir(char dirname[], Queue_t *requests, char progname[]) {
                 read_dir(filename, requests, progname);
             }
 	    } else {
-            // Skip the file if is not regular or if the format is invalid
+            // Skip the file if it is not regular or if the format is invalid
             if(!S_ISREG(statbuf.st_mode)) {
                 fprintf(stderr, "%s: \x1B[1;33mwarning:\x1B[0m ignore '%s': Not a regular file\n", progname, filename);
             } else if ((statbuf.st_size % sizeof(long)) != 0) {
@@ -653,7 +653,7 @@ static void cleanup() {
     close(sfd);
 }
 
-// Signal handler function established for signal SIGHUP, SIGINT, SIGQUIT, SIGTERM
+// Signal handler established for signal SIGHUP, SIGINT, SIGQUIT, SIGTERM
 static void sigexit_handler(int signo) {
     switch (signo) {
         case SIGHUP:

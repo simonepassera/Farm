@@ -119,7 +119,7 @@ printf "\n\e[1mDisplay help message:\e[0m\n\e[1;32m./farm -h\e[0m\n"
 printf "\n\e[1mFile 'not_exist.dat' does not exist:\e[0m\n\e[1;32m./farm not_exist.dat\e[0m\n"
 ./farm not_exist.dat
 
-printf "\n\e[1mNegative worker threads number:\e[0m\n\e[1;32m./farm -n -4 file3.dat\e[0m\n"
+printf "\n\e[1mNegative Worker threads number:\e[0m\n\e[1;32m./farm -n -4 file3.dat\e[0m\n"
 ./farm -n -4 file3.dat
 
 printf "\n\e[1mPass socket file 'farm.sck' as argument:\e[0m\n\e[1;32m./farm file5.dat file20.dat farm.sck\e[0m\n"

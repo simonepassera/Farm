@@ -16,9 +16,9 @@ typedef struct Threadpool {
 /* -------------------- ThreadPool interface -------------------- */
 
 
-/*  Create a new thread pool with 'pool_size' worker threads and internal queue of size 'queue_size'. 
+/*  Create a new thread pool with 'pool_size' Worker threads and internal queue of size 'queue_size'. 
  *  Worker threads send results to file descriptor 'collector_fd'.
- *  The variable 'collector_fd_mutex' ensure correct synchronization between threads.
+ *  The variable 'collector_fd_mutex' ensures correct synchronization between threads.
  *
  *  RETURN VALUE: pointer to the new thread pool on success
  *                NULL on error (errno is set)
