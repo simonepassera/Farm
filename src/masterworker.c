@@ -327,33 +327,45 @@ int main(int argc, char *argv[]) {
             exit(errsv);
         }
 
-        // Init 'collector_fd_mutex' to ensure thread safety on 'cfd' socket
-        pthread_mutex_t collector_fd_mutex;
+        // Create and init 'collector_fd_mutex' to ensure thread safety on 'cfd' socket
+        pthread_mutex_t *collector_fd_mutex;
 
-        if ((error_number = pthread_mutex_init(&collector_fd_mutex, NULL)) != 0) {
+        if ((collector_fd_mutex = malloc(sizeof(pthread_mutex_t))) == NULL) {
+            errsv = errno;
+            fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m malloc(): %s\n", argv[0], strerror(errsv)); 
+            deleteQueue(requests);
+            exit(errsv);
+        }
+
+        if ((error_number = pthread_mutex_init(collector_fd_mutex, NULL)) != 0) {
             fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m pthread_mutex_init(): %s\n", argv[0], strerror(error_number)); 
             deleteQueue(requests);
+            free(collector_fd_mutex);
             exit(error_number);
         }
 
         // Create thread pool
         Threadpool_t *pool;
         
-        if ((pool = initThreadPool(pool_size, queue_size, cfd, &collector_fd_mutex)) == NULL) {
+        if ((pool = initThreadPool(pool_size, queue_size, cfd, collector_fd_mutex)) == NULL) {
             errsv = errno;
             fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m initThreadPool(): %s\n", argv[0], strerror(errsv)); 
             deleteQueue(requests);
+            pthread_mutex_destroy(collector_fd_mutex);
+            free(collector_fd_mutex);
             exit(errsv);
         }
 
         // Spawn signal handler thread
         pthread_t sigprint_handler_tid;
 
-        if((error_number = pthread_create(&sigprint_handler_tid, NULL, sigprint_handler_thread, &collector_fd_mutex)) != 0) {
+        if((error_number = pthread_create(&sigprint_handler_tid, NULL, sigprint_handler_thread, collector_fd_mutex)) != 0) {
             errsv = errno;
             fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m pthread_create() 'sigprint_handler_thread': %s\n", argv[0], strerror(errsv)); 
             deleteQueue(requests);
             shutdownThreadPool(pool);
+            pthread_mutex_destroy(collector_fd_mutex);
+            free(collector_fd_mutex);
             exit(errsv);
         }
 
@@ -442,11 +454,13 @@ int main(int argc, char *argv[]) {
             exit(error_number);
         }
 
-        // Destroy 'collector_fd_mutex'
-        if ((error_number = pthread_mutex_destroy(&collector_fd_mutex)) != 0) {
+        // Destroy and free 'collector_fd_mutex'
+        if ((error_number = pthread_mutex_destroy(collector_fd_mutex)) != 0) {
             fprintf(stderr, "%s: \x1B[1;31merror:\x1B[0m pthread_mutex_destroy(): %s\n", argv[0], strerror(error_number));
             exit(error_number);
         }
+
+        free(collector_fd_mutex);
 
         // Send 0 (exit) to Collector process
         int opcode = 0;
